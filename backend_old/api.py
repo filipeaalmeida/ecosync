@@ -5,6 +5,7 @@ from PyPDF2 import PdfReader
 import traceback
 import re
 import time
+import secrets
 from psycopg2 import sql as psql
 
 from db import DB
@@ -108,6 +109,45 @@ def get_filters_exigencias():
     filters = {k: v for k, v in filters.items() if v}
 
     return filters
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """
+    Rota de autenticação que sempre retorna sucesso.
+    Aceita qualquer combinação de email/senha.
+    """
+    try:
+        # Pega os dados do request (mas não valida)
+        data = request.get_json()
+        email = data.get('email', 'user@example.com')
+        
+        # Gera um token aleatório
+        token = secrets.token_hex(32)
+        
+        # Retorna resposta de sucesso com token e dados do usuário
+        response = {
+            "success": True,
+            "data": {
+                "token": token,
+                "user": {
+                    "id": 1,
+                    "email": email,
+                    "name": "Usuário",
+                    "role": "admin"
+                }
+            },
+            "message": "Login realizado com sucesso"
+        }
+        
+        return jsonify(response), 200
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": "Erro ao processar login",
+            "error": str(e)
+        }), 500
 
 @app.route('/api/exigencias', methods=['GET'])
 def get_exigencias_filtradas():
