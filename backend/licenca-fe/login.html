@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login - Acompanhamento de Exigências</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link href="licenca.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.0/css/all.min.css" />
+  </head>
+  <body>
+
+    <header class="bg-custom text-white py-3 ps-4 d-flex justify-content-between">
+        <h1 class="my-0"><i class="fas fa-clipboard-list me-2"></i>Acompanhamento de Exigências</h1>
+      </header>
+
+    <div class="container-fluid">
+
+        <div class="row justify-content-center align-items-center" style="height: calc(100vh - 320px)">
+            <div class="col-md-4 d-flex justify-content-center align-items-center">
+                <div class="card w-50"> <!-- classe "w-75" adicionada aqui -->
+                  <div class="card-header bg-custom text-white">
+                    <h4 class="card-title mb-0">Login</h4>
+                  </div>
+                  <div class="card-body">
+                    <form>
+                      <div class="mb-3">
+                        <label for="username" class="form-label">Usuário</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                      </div>
+                      <div class="mb-3">
+                        <label for="password" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                      </div>
+                      <div class="d-grid" style="margin-top: 30px;"> <!-- adicionando margem superior de 20px -->
+                        <button type="submit" class="btn btn-primary">Entrar</button>
+                      </div>
+                      
+                    </form>
+                  </div>
+                </div>
+              </div>
+              
+        </div>
+      </div>
+      
+      
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+  </body>
+</html>
