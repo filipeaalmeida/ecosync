@@ -40,51 +40,69 @@ const Exigencias: React.FC = () => {
   const [exigencias, setExigencias] = useState<Exigencia[]>([
     {
       id: 1,
+      descricaoResumida: 'Relatório anual com demonstrações financeiras',
       descricao: 'Apresentar relatório anual completo com demonstrações financeiras auditadas, incluindo balanço patrimonial, demonstração de resultados, fluxo de caixa e notas explicativas. O relatório deve estar em conformidade com as normas contábeis vigentes e incluir parecer de auditoria independente.',
       processo: 'Aplicação Inicial',
       prazo: '15/08/2024',
       status: 'Em Progresso',
-      atribuidoA: 'Maria Silva'
+      atribuidoA: 'Maria Silva',
+      observacoes: 'Aguardando retorno da auditoria externa. Previsão de conclusão em 10 dias.',
+      criadoPor: 'ia'
     },
     {
       id: 2,
+      descricaoResumida: 'Renovação de licença de operação',
       descricao: 'Renovar a licença de operação junto ao órgão competente, incluindo toda a documentação necessária como alvará de funcionamento, certificados de regularidade fiscal e trabalhista.',
       processo: 'Renovação',
       prazo: '30/07/2024',
       status: 'Concluído',
-      atribuidoA: 'João Santos'
+      atribuidoA: 'João Santos',
+      observacoes: '',
+      criadoPor: 'usuario'
     },
     {
       id: 3,
+      descricaoResumida: 'Treinamento de compliance obrigatório',
       descricao: 'Completar o treinamento obrigatório de compliance e ética empresarial para todos os funcionários da empresa. O treinamento deve abordar políticas anticorrupção, código de conduta, proteção de dados e práticas de segurança da informação. Certificados individuais devem ser emitidos e arquivados.',
       processo: 'Aplicação Inicial',
       prazo: '01/09/2024',
       status: 'Não Iniciado',
-      atribuidoA: 'Ana Costa'
+      atribuidoA: 'Ana Costa',
+      observacoes: 'Contatar RH para agendar as sessões de treinamento.',
+      criadoPor: 'ia'
     },
     {
       id: 4,
+      descricaoResumida: 'Pagamento de taxas de licenciamento',
       descricao: 'Realizar o pagamento das taxas de licenciamento e emolumentos referentes ao exercício atual. Incluir comprovantes de pagamento e guias quitadas.',
       processo: 'Pagamento',
       prazo: '20/08/2024',
       status: 'Em Progresso',
-      atribuidoA: 'Pedro Oliveira'
+      atribuidoA: 'Pedro Oliveira',
+      observacoes: '',
+      criadoPor: 'usuario'
     },
     {
       id: 5,
+      descricaoResumida: 'Atualização de apólice de seguro',
       descricao: 'Atualizar a apólice de seguro empresarial com cobertura mínima exigida pela legislação, incluindo seguro de responsabilidade civil, seguro patrimonial e seguro de acidentes de trabalho. Apresentar cópia autenticada da apólice e comprovante de pagamento do prêmio.',
       processo: 'Atualização',
       prazo: '25/07/2024',
       status: 'Concluído',
-      atribuidoA: 'Carla Mendes'
+      atribuidoA: 'Carla Mendes',
+      observacoes: 'Apólice renovada com a seguradora Porto Seguro.',
+      criadoPor: 'usuario'
     },
     {
       id: 6,
+      descricaoResumida: 'Plano de gestão ambiental',
       descricao: 'Submeter o plano de gestão ambiental atualizado, incluindo medidas de controle de poluição, gestão de resíduos, uso eficiente de recursos naturais e programa de educação ambiental para colaboradores.',
       processo: 'Aplicação Inicial',
       prazo: '10/09/2024',
       status: 'Pendente',
-      atribuidoA: 'Roberto Lima'
+      atribuidoA: 'Roberto Lima',
+      observacoes: 'Aguardando parecer do consultor ambiental.',
+      criadoPor: 'ia'
     }
   ]);
 
@@ -120,10 +138,19 @@ const Exigencias: React.FC = () => {
     console.log('Salvando exigência:', exigenciaData);
     if (modalMode === 'create') {
       console.log('Criando nova exigência');
-      // Aqui seria feita a chamada ao backend para criar
+      // Adicionar nova exigência com ID único
+      const newExigencia = {
+        ...exigenciaData,
+        id: Math.max(...exigencias.map(e => e.id)) + 1,
+        criadoPor: 'usuario' as const
+      };
+      setExigencias(prev => [...prev, newExigencia]);
     } else if (modalMode === 'edit') {
       console.log('Atualizando exigência existente');
-      // Aqui seria feita a chamada ao backend para atualizar
+      // Atualizar exigência existente
+      setExigencias(prev => prev.map(e => 
+        e.id === exigenciaData.id ? exigenciaData : e
+      ));
     }
     setIsModalOpen(false);
     setSelectedExigencia(null);
@@ -167,13 +194,16 @@ const Exigencias: React.FC = () => {
   const handleDownloadXLSX = () => {
     // Converter para CSV (formato simplificado)
     const csvContent = [
-      ['Descrição', 'Processo', 'Prazo', 'Status', 'Responsável'],
+      ['Descrição Resumida', 'Descrição Completa', 'Processo', 'Prazo', 'Status', 'Responsável', 'Observações', 'Criado Por'],
       ...exigencias.map(e => [
+        e.descricaoResumida,
         e.descricao,
         e.processo,
         e.prazo,
         e.status,
-        e.atribuidoA
+        e.atribuidoA,
+        e.observacoes || '',
+        e.criadoPor === 'ia' ? 'IA' : 'Usuário'
       ])
     ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
     

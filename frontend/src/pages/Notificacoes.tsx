@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, ExternalLink, Clock, AlertCircle, RefreshCw, Check, ChevronDown } from 'lucide-react';
 import Header from '../components/Header';
-import RequirementViewModal from '../components/RequirementViewModal';
+import RequirementModal from '../components/RequirementModal';
 import { useNavigate } from 'react-router-dom';
 
 interface Notification {
@@ -24,13 +24,26 @@ const Notificacoes: React.FC = () => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showExigenciaModal, setShowExigenciaModal] = useState(false);
-  const [selectedExigenciaId, setSelectedExigenciaId] = useState<number | null>(null);
+  const [selectedExigencia, setSelectedExigencia] = useState<any>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Função para formatar o texto de dias
+  const formatDiasInfo = (diasInfo: string): string => {
+    // Substituir "Vence em 0 dias" por "Vence hoje"
+    if (diasInfo === 'Vence em 0 dias') {
+      return 'Vence hoje';
+    }
+    // Substituir "Venceu há 0 dias" por "Venceu hoje"
+    if (diasInfo === 'Venceu há 0 dias') {
+      return 'Venceu hoje';
+    }
+    return diasInfo;
+  };
+
   const typeOptions = [
-    { value: 'exigencia_vencida', label: 'Exigências Vencidas' },
-    { value: 'exigencia_prazo', label: 'Prazos Próximos' },
-    { value: 'renovacao_prazo', label: 'Renovações de Prazo' },
+    { value: 'exigencia_vencida', label: 'Exigências vencidas' },
+    { value: 'exigencia_prazo', label: 'Exigências próximas do prazo' },
+    { value: 'renovacao_prazo', label: 'Solicitação de renovação próxima' },
     { value: 'atribuicao', label: 'Atribuídas a mim' }
   ];
 
@@ -75,9 +88,9 @@ const Notificacoes: React.FC = () => {
     {
       id: '3',
       type: 'renovacao_prazo',
-      title: 'Solicitação de renovação de prazo',
+      title: 'Solicitação de renovação de licença',
       prazo: '20/09/2024',
-      diasInfo: 'Prazo renovado',
+      diasInfo: 'Vence em 37 dias',
       descricaoCompleta: 'Submeter plano de gestão ambiental atualizado',
       date: '2024-08-14',
       time: '11:15',
@@ -135,9 +148,9 @@ const Notificacoes: React.FC = () => {
     {
       id: '8',
       type: 'renovacao_prazo',
-      title: 'Solicitação de renovação de prazo',
+      title: 'Solicitação de renovação de licença',
       prazo: '15/08/2024',
-      diasInfo: 'Prazo renovado',
+      diasInfo: 'Vence em 1 dia',
       descricaoCompleta: 'Atualizar apólice de seguro empresarial',
       date: '2024-08-12',
       time: '10:00',
@@ -172,16 +185,30 @@ const Notificacoes: React.FC = () => {
   ]);
 
   const handleNotificationClick = (notification: Notification) => {
-    // Marcar como lida
+    // Alternar entre lida e não lida
     setNotifications(prev => 
-      prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+      prev.map(n => n.id === notification.id ? { ...n, read: !n.read } : n)
     );
+  };
 
+  const handleIconClick = (e: React.MouseEvent, notification: Notification) => {
+    e.stopPropagation();
+    
     if (notification.exigenciaId) {
-      setSelectedExigenciaId(notification.exigenciaId);
+      // Mock de exigência para o modal
+      const mockExigencia = {
+        id: notification.exigenciaId,
+        titulo: notification.descricaoCompleta || notification.title,
+        descricao: notification.descricaoCompleta || '',
+        prazo: notification.prazo || '',
+        status: 'Pendente',
+        responsavel: notification.responsavel || 'Não atribuído'
+      };
+      setSelectedExigencia(mockExigencia);
       setShowExigenciaModal(true);
     }
   };
+
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -205,7 +232,7 @@ const Notificacoes: React.FC = () => {
       case 'exigencia_prazo':
         return 'Prazo Próximo';
       case 'renovacao_prazo':
-        return 'Renovação de Prazo';
+        return 'Prazo Próximo';
       case 'atribuicao':
         return 'Atribuição';
       default:
@@ -305,6 +332,11 @@ const Notificacoes: React.FC = () => {
                 </button>
               )}
             </div>
+
+            {/* Texto orientativo */}
+            <p className="text-sm text-gray-500 mb-4">
+              Clique nas notificações para marcar como lidas ou não lidas
+            </p>
 
             {/* Filtros */}
             <div className="flex gap-4 mb-6">
@@ -436,6 +468,9 @@ const Notificacoes: React.FC = () => {
                                     {notification.responsavel && (
                                       <p className="text-sm text-gray-600">
                                         Atribuído por: <span className="font-medium">{notification.responsavel}</span>
+                                        {notification.type === 'atribuicao' && (
+                                          <span className="text-xs text-gray-400 ml-2">às {notification.time}</span>
+                                        )}
                                       </p>
                                     )}
                                     {notification.diasInfo && (
@@ -446,33 +481,19 @@ const Notificacoes: React.FC = () => {
                                         notification.type === 'atribuicao' ? 'text-purple-600' :
                                         'text-gray-600'
                                       }`}>
-                                        {notification.diasInfo}
-                                      </p>
-                                    )}
-                                    {notification.type === 'atribuicao' && (
-                                      <p className="text-xs text-gray-500 italic">
-                                        Clique para ver detalhes da exigência
+                                        {formatDiasInfo(notification.diasInfo)}
                                       </p>
                                     )}
                                   </div>
-                                  <p className="text-xs text-gray-400 mt-2">
-                                    {notification.time}
-                                  </p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {notification.exigenciaId && (
-                                    <ExternalLink size={16} className="text-blue-600" />
-                                  )}
-                                  {!notification.read && (
+                                  {notification.exigenciaId && notification.type !== 'renovacao_prazo' && (
                                     <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        markAsRead(notification.id);
-                                      }}
-                                      className="text-blue-600 hover:text-blue-800 p-1"
-                                      title="Marcar como lida"
+                                      onClick={(e) => handleIconClick(e, notification)}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      title="Ver detalhes da exigência"
                                     >
-                                      <Check size={16} />
+                                      <ExternalLink size={16} className="text-blue-600" />
                                     </button>
                                   )}
                                 </div>
@@ -489,14 +510,19 @@ const Notificacoes: React.FC = () => {
         </div>
       </div>
 
-      {showExigenciaModal && selectedExigenciaId && (
-        <RequirementViewModal
+      {showExigenciaModal && selectedExigencia && (
+        <RequirementModal
           isOpen={showExigenciaModal}
           onClose={() => {
             setShowExigenciaModal(false);
-            setSelectedExigenciaId(null);
+            setSelectedExigencia(null);
           }}
-          exigenciaId={selectedExigenciaId}
+          mode="edit"
+          exigencia={selectedExigencia}
+          onSave={() => {
+            setShowExigenciaModal(false);
+            setSelectedExigencia(null);
+          }}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, ExternalLink, Clock, AlertCircle, RefreshCw, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import RequirementViewModal from './RequirementViewModal';
+import RequirementModal from './RequirementModal';
 
 interface Notification {
   id: string;
@@ -19,6 +19,20 @@ interface Notification {
 const NotificationDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Função para formatar o texto de dias
+  const formatDiasInfo = (diasInfo: string): string => {
+    // Substituir "Vence em 0 dias" por "Vence hoje"
+    if (diasInfo === 'Vence em 0 dias') {
+      return 'Vence hoje';
+    }
+    // Substituir "Venceu há 0 dias" por "Venceu hoje"
+    if (diasInfo === 'Venceu há 0 dias') {
+      return 'Venceu hoje';
+    }
+    return diasInfo;
+  };
+  
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: '1',
@@ -65,7 +79,7 @@ const NotificationDropdown: React.FC = () => {
     {
       id: '5',
       type: 'renovacao_prazo',
-      title: 'Solicitação de renovação de prazo',
+      title: 'Solicitação de renovação de licença',
       prazo: '20/09/2024',
       diasInfo: 'Vence em 37 dias',
       date: '2024-08-14',
@@ -87,7 +101,7 @@ const NotificationDropdown: React.FC = () => {
     {
       id: '7',
       type: 'renovacao_prazo',
-      title: 'Solicitação de renovação de prazo',
+      title: 'Solicitação de renovação de licença',
       prazo: '05/09/2024',
       diasInfo: 'Vence em 22 dias',
       date: '2024-08-12',
@@ -98,7 +112,7 @@ const NotificationDropdown: React.FC = () => {
   ]);
 
   const [showExigenciaModal, setShowExigenciaModal] = useState(false);
-  const [selectedExigenciaId, setSelectedExigenciaId] = useState<number | null>(null);
+  const [selectedExigencia, setSelectedExigencia] = useState<any>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -117,17 +131,31 @@ const NotificationDropdown: React.FC = () => {
   }, []);
 
   const handleNotificationClick = (notification: Notification) => {
-    // Marcar como lida
+    // Alternar entre lida e não lida
     setNotifications(prev => 
-      prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+      prev.map(n => n.id === notification.id ? { ...n, read: !n.read } : n)
     );
+  };
 
+  const handleIconClick = (e: React.MouseEvent, notification: Notification) => {
+    e.stopPropagation();
+    
     if (notification.exigenciaId) {
-      setSelectedExigenciaId(notification.exigenciaId);
+      // Mock de exigência para o modal
+      const mockExigencia = {
+        id: notification.exigenciaId,
+        titulo: notification.title,
+        descricao: notification.title,
+        prazo: notification.prazo || '',
+        status: 'Pendente',
+        responsavel: notification.responsavel || 'Não atribuído'
+      };
+      setSelectedExigencia(mockExigencia);
       setShowExigenciaModal(true);
       setIsOpen(false);
     }
   };
+
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -206,8 +234,14 @@ const NotificationDropdown: React.FC = () => {
                         <h4 className="text-sm font-medium text-gray-900 break-words">
                           {notification.title}
                         </h4>
-                        {notification.exigenciaId && (
-                          <ExternalLink size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                        {notification.exigenciaId && notification.type !== 'renovacao_prazo' && (
+                          <button
+                            onClick={(e) => handleIconClick(e, notification)}
+                            className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                            title="Ver detalhes da exigência"
+                          >
+                            <ExternalLink size={14} className="text-blue-600" />
+                          </button>
                         )}
                       </div>
                       
@@ -221,6 +255,9 @@ const NotificationDropdown: React.FC = () => {
                         {notification.responsavel && (
                           <p className="text-sm text-gray-600">
                             Atribuído por: {notification.responsavel}
+                            {notification.type === 'atribuicao' && (
+                              <span className="text-xs text-gray-400 ml-2">às {notification.time}</span>
+                            )}
                           </p>
                         )}
                         {notification.diasInfo && (
@@ -231,12 +268,7 @@ const NotificationDropdown: React.FC = () => {
                             notification.type === 'atribuicao' ? 'text-purple-600' :
                             'text-gray-600'
                           }`}>
-                            {notification.diasInfo}
-                          </p>
-                        )}
-                        {notification.type === 'atribuicao' && (
-                          <p className="text-xs text-gray-500">
-                            Clique para ver detalhes
+                            {formatDiasInfo(notification.diasInfo)}
                           </p>
                         )}
                       </div>
@@ -270,14 +302,19 @@ const NotificationDropdown: React.FC = () => {
         )}
       </div>
 
-      {showExigenciaModal && selectedExigenciaId && (
-        <RequirementViewModal
+      {showExigenciaModal && selectedExigencia && (
+        <RequirementModal
           isOpen={showExigenciaModal}
           onClose={() => {
             setShowExigenciaModal(false);
-            setSelectedExigenciaId(null);
+            setSelectedExigencia(null);
           }}
-          exigenciaId={selectedExigenciaId}
+          mode="edit"
+          exigencia={selectedExigencia}
+          onSave={() => {
+            setShowExigenciaModal(false);
+            setSelectedExigencia(null);
+          }}
         />
       )}
     </>

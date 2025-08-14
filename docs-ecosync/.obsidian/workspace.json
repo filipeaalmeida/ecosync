@@ -11,14 +11,10 @@
             "id": "89c19e7263099f2e",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "PRD-EcoSync.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "PRD-EcoSync"
+              "title": "New tab"
             }
           }
         ]
@@ -170,7 +166,11 @@
   },
   "active": "89c19e7263099f2e",
   "lastOpenFiles": [
-    "PRD-EcoSync.md.tmp.6829.1755092667762",
-    "PRD-EcoSync.md"
+    "endpoints-completo.md",
+    "openapi.yaml",
+    "endpoints-revisado.md",
+    "endpoints-processos.md",
+    "PRD-EcoSync.md",
+    "PRD-EcoSync.md.tmp.6829.1755092667762"
   ]
 }

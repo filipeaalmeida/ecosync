@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Bot, User } from 'lucide-react';
 import { Exigencia } from './TabelaExigencias';
 import SearchableDropdown, { DropdownOption } from './SearchableDropdown';
 
@@ -19,11 +19,14 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
   mode
 }) => {
   const [formData, setFormData] = useState<Omit<Exigencia, 'id'> & { id?: number }>({
+    descricaoResumida: '',
     descricao: '',
     processo: '',
     prazo: '',
     status: 'Não Iniciado',
-    atribuidoA: ''
+    atribuidoA: '',
+    observacoes: '',
+    criadoPor: 'usuario'
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof Exigencia, string>>>({});
@@ -68,11 +71,14 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
       setSelectedResponsavel(responsavel || null);
     } else {
       setFormData({
+        descricaoResumida: '',
         descricao: '',
         processo: 'LO_CIRANDA_02', // Processo fixo do contexto atual
         prazo: '',
         status: 'Não Iniciado',
-        atribuidoA: ''
+        atribuidoA: '',
+        observacoes: '',
+        criadoPor: 'usuario'
       });
       setSelectedStatus(statusOptions[0]); // Não Iniciado como padrão
       setSelectedResponsavel(null);
@@ -102,6 +108,10 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof Exigencia, string>> = {};
     
+    if (!formData.descricaoResumida.trim()) {
+      newErrors.descricaoResumida = 'Descrição resumida é obrigatória';
+    }
+    
     if (!formData.descricao.trim()) {
       newErrors.descricao = 'Descrição é obrigatória';
     }
@@ -124,11 +134,14 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
     if (validateForm()) {
       const dataToSave: Exigencia = {
         id: formData.id || 0,
+        descricaoResumida: formData.descricaoResumida,
         descricao: formData.descricao,
         processo: formData.processo,
         prazo: convertDateFormat(formData.prazo, 'toDisplay'),
         status: formData.status,
-        atribuidoA: formData.atribuidoA
+        atribuidoA: formData.atribuidoA,
+        observacoes: formData.observacoes,
+        criadoPor: formData.criadoPor
       };
       onSave(dataToSave);
       onClose();
@@ -159,9 +172,26 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
         
         <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl">
           <div className="flex items-center justify-between border-b p-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {mode === 'create' ? 'Adicionar Nova Exigência' : 'Editar Exigência'}
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {mode === 'create' ? 'Adicionar Nova Exigência' : 'Editar Exigência'}
+              </h2>
+              {mode === 'edit' && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100">
+                  {formData.criadoPor === 'ia' ? (
+                    <>
+                      <Bot size={16} className="text-purple-600" />
+                      <span className="text-xs text-gray-600">Gerada por IA</span>
+                    </>
+                  ) : (
+                    <>
+                      <User size={16} className="text-blue-600" />
+                      <span className="text-xs text-gray-600">Criada pelo usuário</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -173,7 +203,27 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Descrição da Exigência *
+                Descrição Resumida *
+              </label>
+              <input
+                type="text"
+                name="descricaoResumida"
+                value={formData.descricaoResumida}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.descricaoResumida ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Resumo breve da exigência..."
+                maxLength={100}
+              />
+              {errors.descricaoResumida && (
+                <p className="mt-1 text-sm text-red-600">{errors.descricaoResumida}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Descrição Completa *
               </label>
               <textarea
                 name="descricao"
@@ -258,6 +308,20 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
                 placeholder="Buscar responsável..."
                 allowEmpty={true}
                 emptyText="Nenhum responsável"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observações
+              </label>
+              <textarea
+                name="observacoes"
+                value={formData.observacoes}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Observações adicionais (opcional)..."
               />
             </div>
 

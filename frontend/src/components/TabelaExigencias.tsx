@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ExternalLink, MoreVertical } from 'lucide-react';
+import { ExternalLink, MoreVertical, Bot, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DateIndicator from './DateIndicator';
 import SearchableDropdown, { DropdownOption } from './SearchableDropdown';
 
 export interface Exigencia {
   id: number;
+  descricaoResumida: string;
   descricao: string;
   processo: string;
   prazo: string;
   status: 'Em Progresso' | 'Concluído' | 'Não Iniciado' | 'Pendente';
   atribuidoA: string;
+  observacoes?: string;
+  criadoPor: 'ia' | 'usuario';
 }
 
 interface TabelaExigenciasProps {
@@ -144,7 +147,7 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
           <table className="w-full">
           <thead>
             <tr className="bg-slate-50">
-              <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[300px]">Descrição</th>
+              <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[300px]">Descrição Resumida</th>
               <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[150px]">Processo</th>
               <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[120px]">Prazo</th>
               <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[130px]">Status</th>
@@ -156,8 +159,29 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
             {exigencias.map((exigencia) => (
               <tr key={exigencia.id} className="border-t border-t-[#cedbe8]">
                 <td className="h-[72px] px-4 py-2 text-[#0d141c] text-sm font-normal leading-normal">
-                  <div className="max-w-[400px]">
-                    {exigencia.descricao}
+                  <div className="max-w-[400px] group relative">
+                    <div className="flex items-center gap-2">
+                      <span title={exigencia.criadoPor === 'ia' ? 'Gerada por IA' : 'Criada pelo usuário'}>
+                        {exigencia.criadoPor === 'ia' ? (
+                          <Bot size={14} className="text-purple-600 flex-shrink-0" />
+                        ) : (
+                          <User size={14} className="text-blue-600 flex-shrink-0" />
+                        )}
+                      </span>
+                      <span className="cursor-help">{exigencia.descricaoResumida}</span>
+                    </div>
+                    {/* Tooltip com descrição completa */}
+                    <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-900 text-white text-sm rounded-lg p-3 max-w-md w-max top-full mt-2 left-0 shadow-xl">
+                      <div className="font-semibold mb-1">Descrição Completa:</div>
+                      <div className="whitespace-pre-wrap">{exigencia.descricao}</div>
+                      {exigencia.observacoes && (
+                        <>
+                          <div className="font-semibold mt-2 mb-1">Observações:</div>
+                          <div className="whitespace-pre-wrap text-gray-300">{exigencia.observacoes}</div>
+                        </>
+                      )}
+                      <div className="absolute -top-2 left-4 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-gray-900"></div>
+                    </div>
                   </div>
                 </td>
                 <td className="h-[72px] px-4 py-2 text-[#49739c] text-sm font-normal leading-normal">

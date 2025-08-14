@@ -137,6 +137,13 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
   const [notificationRules, setNotificationRules] = useState<NotificationRule[]>([]);
   const [newEmail, setNewEmail] = useState('');
   
+  // Estados para dropdowns de usuários
+  const [openUserDropdown, setOpenUserDropdown] = useState<'prazo' | 'renovacao' | 'vencimento' | null>(null);
+  const [userSearchPrazo, setUserSearchPrazo] = useState('');
+  const [userSearchRenovacao, setUserSearchRenovacao] = useState('');
+  const [userSearchVencimento, setUserSearchVencimento] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
   // Estados para configurações de vencimento
   const [vencimentoConfig, setVencimentoConfig] = useState({
     criador: { enabled: false, sistema: false, email: false },
@@ -244,51 +251,69 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
   const [exigencias, setExigencias] = useState<Exigencia[]>([
     {
       id: 1,
+      descricaoResumida: 'Relatório anual com demonstrações financeiras',
       descricao: 'Apresentar relatório anual completo com demonstrações financeiras auditadas, incluindo balanço patrimonial, demonstração de resultados, fluxo de caixa e notas explicativas. O relatório deve estar em conformidade com as normas contábeis vigentes e incluir parecer de auditoria independente.',
       processo: 'Aplicação Inicial',
       prazo: '15/08/2024',
       status: 'Em Progresso' as 'Em Progresso',
-      atribuidoA: 'Maria Silva'
+      atribuidoA: 'Maria Silva',
+      observacoes: '',
+      criadoPor: 'ia'
     },
     {
       id: 2,
+      descricaoResumida: 'Renovação de licença de operação',
       descricao: 'Renovar a licença de operação junto ao órgão competente, incluindo toda a documentação necessária como alvará de funcionamento, certificados de regularidade fiscal e trabalhista.',
       processo: 'Renovação',
       prazo: '30/07/2024',
       status: 'Concluído' as 'Concluído',
-      atribuidoA: 'João Santos'
+      atribuidoA: 'João Santos',
+      observacoes: '',
+      criadoPor: 'usuario'
     },
     {
       id: 3,
+      descricaoResumida: 'Treinamento de compliance obrigatório',
       descricao: 'Completar o treinamento obrigatório de compliance e ética empresarial para todos os funcionários da empresa. O treinamento deve abordar políticas anticorrupção, código de conduta, proteção de dados e práticas de segurança da informação. Certificados individuais devem ser emitidos e arquivados.',
       processo: 'Aplicação Inicial',
       prazo: '01/09/2024',
       status: 'Não Iniciado' as 'Não Iniciado',
-      atribuidoA: 'Ana Costa'
+      atribuidoA: 'Ana Costa',
+      observacoes: '',
+      criadoPor: 'ia'
     },
     {
       id: 4,
+      descricaoResumida: 'Pagamento de taxas de licenciamento',
       descricao: 'Realizar o pagamento das taxas de licenciamento e emolumentos referentes ao exercício atual. Incluir comprovantes de pagamento e guias quitadas.',
       processo: 'Pagamento',
       prazo: '20/08/2024',
       status: 'Em Progresso' as 'Em Progresso',
-      atribuidoA: 'Pedro Oliveira'
+      atribuidoA: 'Pedro Oliveira',
+      observacoes: '',
+      criadoPor: 'usuario'
     },
     {
       id: 5,
+      descricaoResumida: 'Atualização de apólice de seguro',
       descricao: 'Atualizar a apólice de seguro empresarial com cobertura mínima exigida pela legislação, incluindo seguro de responsabilidade civil, seguro patrimonial e seguro de acidentes de trabalho. Apresentar cópia autenticada da apólice e comprovante de pagamento do prêmio.',
       processo: 'Atualização',
       prazo: '25/07/2024',
       status: 'Concluído' as 'Concluído',
-      atribuidoA: 'Carla Mendes'
+      atribuidoA: 'Carla Mendes',
+      observacoes: '',
+      criadoPor: 'usuario'
     },
     {
       id: 6,
+      descricaoResumida: 'Plano de gestão ambiental',
       descricao: 'Submeter o plano de gestão ambiental atualizado, incluindo medidas de controle de poluição, gestão de resíduos, uso eficiente de recursos naturais e programa de educação ambiental para colaboradores.',
       processo: 'Aplicação Inicial',
       prazo: '10/09/2024',
       status: 'Pendente' as 'Pendente',
-      atribuidoA: 'Roberto Lima'
+      atribuidoA: 'Roberto Lima',
+      observacoes: '',
+      criadoPor: 'ia'
     }
   ]);
 
@@ -299,6 +324,9 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
     const handleClickOutside = (event: MouseEvent) => {
       if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
         setOpenFilterDropdown(null);
+      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenUserDropdown(null);
       }
     };
 
@@ -656,6 +684,34 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
       usuario.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
+  
+  // Função para alternar seleção de usuário no dropdown
+  const toggleUsuarioPrazo = (usuario: { id: string, name: string, email: string }) => {
+    const isSelected = tempPrazoForm.usuariosSelecionados.some(u => u.id === usuario.id);
+    if (isSelected) {
+      removeUsuarioPrazo(usuario.id);
+    } else {
+      addUsuarioPrazo(usuario);
+    }
+  };
+  
+  const toggleUsuarioRenovacao = (usuario: { id: string, name: string, email: string }) => {
+    const isSelected = tempRenovacaoForm.usuariosSelecionados.some(u => u.id === usuario.id);
+    if (isSelected) {
+      removeUsuarioRenovacao(usuario.id);
+    } else {
+      addUsuarioRenovacao(usuario);
+    }
+  };
+  
+  const toggleUsuarioVencimento = (usuario: { id: string, name: string, email: string }) => {
+    const isSelected = tempVencimentoForm.usuariosSelecionados.some(u => u.id === usuario.id);
+    if (isSelected) {
+      removeUsuarioVencimento(usuario.id);
+    } else {
+      addUsuarioVencimento(usuario);
+    }
+  };
 
   // Funções para gerenciar seleção de usuários - Renovação
   const addUsuarioRenovacao = (usuario: { id: string, name: string, email: string }) => {
@@ -818,40 +874,60 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
                     {/* Usuários do sistema */}
                     <div className="border-t pt-4">
                       <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Usuários adicionais do sistema
+                        Usuários adicionais que receberão a notificação
                       </label>
                       
                       <div className="space-y-3">
-                        {/* Busca */}
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={tempPrazoForm.usuarioSearch}
-                            onChange={(e) => setTempPrazoForm(prev => ({...prev, usuarioSearch: e.target.value}))}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Digite o nome do usuário..."
-                          />
-                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                          </div>
+                        {/* Dropdown de seleção múltipla */}
+                        <div className="relative" ref={openUserDropdown === 'prazo' ? dropdownRef : null}>
+                          <button
+                            type="button"
+                            onClick={() => setOpenUserDropdown(openUserDropdown === 'prazo' ? null : 'prazo')}
+                            className="w-full flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50"
+                          >
+                            <span className="text-gray-700">
+                              {tempPrazoForm.usuariosSelecionados.length === 0 
+                                ? 'Selecione os usuários...'
+                                : `${tempPrazoForm.usuariosSelecionados.length} usuário${tempPrazoForm.usuariosSelecionados.length > 1 ? 's' : ''} selecionado${tempPrazoForm.usuariosSelecionados.length > 1 ? 's' : ''}`}
+                            </span>
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openUserDropdown === 'prazo' ? 'rotate-180' : ''}`} />
+                          </button>
                           
-                          {tempPrazoForm.usuarioSearch && getFilteredUsuarios(tempPrazoForm.usuarioSearch).length > 0 && (
-                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                              {getFilteredUsuarios(tempPrazoForm.usuarioSearch).map((usuario) => (
-                                <button
-                                  key={usuario.id}
-                                  type="button"
-                                  onClick={() => {
-                                    addUsuarioPrazo(usuario);
-                                    setTempPrazoForm(prev => ({...prev, usuarioSearch: ''}));
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
-                                >
-                                  <div className="font-medium text-gray-900 text-sm">{usuario.name}</div>
-                                </button>
-                              ))}
+                          {openUserDropdown === 'prazo' && (
+                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                              {/* Campo de busca dentro do dropdown */}
+                              <div className="p-2 border-b border-gray-200">
+                                <input
+                                  type="text"
+                                  value={userSearchPrazo}
+                                  onChange={(e) => setUserSearchPrazo(e.target.value)}
+                                  className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  placeholder="Buscar usuário..."
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              
+                              {/* Lista de usuários com checkboxes */}
+                              <div className="max-h-48 overflow-y-auto">
+                                {sistemaUsuarios
+                                  .filter(usuario => 
+                                    usuario.name.toLowerCase().includes(userSearchPrazo.toLowerCase())
+                                  )
+                                  .map((usuario) => (
+                                    <label
+                                      key={usuario.id}
+                                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={tempPrazoForm.usuariosSelecionados.some(u => u.id === usuario.id)}
+                                        onChange={() => toggleUsuarioPrazo(usuario)}
+                                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                      />
+                                      <span>{usuario.name}</span>
+                                    </label>
+                                  ))}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1065,40 +1141,60 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
                     {/* Usuários do sistema */}
                     <div className="border-t pt-4">
                       <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Usuários adicionais do sistema
+                        Usuários adicionais que receberão a notificação
                       </label>
                       
                       <div className="space-y-3">
-                        {/* Busca */}
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={usuarioSearchRenovacao}
-                            onChange={(e) => setUsuarioSearchRenovacao(e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Digite o nome do usuário..."
-                          />
-                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                          </div>
+                        {/* Dropdown de seleção múltipla */}
+                        <div className="relative" ref={openUserDropdown === 'renovacao' ? dropdownRef : null}>
+                          <button
+                            type="button"
+                            onClick={() => setOpenUserDropdown(openUserDropdown === 'renovacao' ? null : 'renovacao')}
+                            className="w-full flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50"
+                          >
+                            <span className="text-gray-700">
+                              {tempRenovacaoForm.usuariosSelecionados.length === 0 
+                                ? 'Selecione os usuários...'
+                                : `${tempRenovacaoForm.usuariosSelecionados.length} usuário${tempRenovacaoForm.usuariosSelecionados.length > 1 ? 's' : ''} selecionado${tempRenovacaoForm.usuariosSelecionados.length > 1 ? 's' : ''}`}
+                            </span>
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openUserDropdown === 'renovacao' ? 'rotate-180' : ''}`} />
+                          </button>
                           
-                          {usuarioSearchRenovacao && getFilteredUsuarios(usuarioSearchRenovacao).length > 0 && (
-                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                              {getFilteredUsuarios(usuarioSearchRenovacao).map((usuario) => (
-                                <button
-                                  key={usuario.id}
-                                  type="button"
-                                  onClick={() => {
-                                    addUsuarioRenovacao(usuario);
-                                    setUsuarioSearchRenovacao('');
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
-                                >
-                                  <div className="font-medium text-gray-900 text-sm">{usuario.name}</div>
-                                </button>
-                              ))}
+                          {openUserDropdown === 'renovacao' && (
+                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                              {/* Campo de busca dentro do dropdown */}
+                              <div className="p-2 border-b border-gray-200">
+                                <input
+                                  type="text"
+                                  value={userSearchRenovacao}
+                                  onChange={(e) => setUserSearchRenovacao(e.target.value)}
+                                  className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  placeholder="Buscar usuário..."
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              
+                              {/* Lista de usuários com checkboxes */}
+                              <div className="max-h-48 overflow-y-auto">
+                                {sistemaUsuarios
+                                  .filter(usuario => 
+                                    usuario.name.toLowerCase().includes(userSearchRenovacao.toLowerCase())
+                                  )
+                                  .map((usuario) => (
+                                    <label
+                                      key={usuario.id}
+                                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={tempRenovacaoForm.usuariosSelecionados.some(u => u.id === usuario.id)}
+                                        onChange={() => toggleUsuarioRenovacao(usuario)}
+                                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                      />
+                                      <span>{usuario.name}</span>
+                                    </label>
+                                  ))}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1312,40 +1408,60 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
                     {/* Usuários do sistema */}
                     <div className="border-t pt-4">
                       <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Usuários adicionais do sistema
+                        Usuários adicionais que receberão a notificação
                       </label>
                       
                       <div className="space-y-3">
-                        {/* Busca */}
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={tempVencimentoForm.usuarioSearch}
-                            onChange={(e) => setTempVencimentoForm(prev => ({...prev, usuarioSearch: e.target.value}))}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Digite o nome do usuário..."
-                          />
-                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                          </div>
+                        {/* Dropdown de seleção múltipla */}
+                        <div className="relative" ref={openUserDropdown === 'vencimento' ? dropdownRef : null}>
+                          <button
+                            type="button"
+                            onClick={() => setOpenUserDropdown(openUserDropdown === 'vencimento' ? null : 'vencimento')}
+                            className="w-full flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50"
+                          >
+                            <span className="text-gray-700">
+                              {tempVencimentoForm.usuariosSelecionados.length === 0 
+                                ? 'Selecione os usuários...'
+                                : `${tempVencimentoForm.usuariosSelecionados.length} usuário${tempVencimentoForm.usuariosSelecionados.length > 1 ? 's' : ''} selecionado${tempVencimentoForm.usuariosSelecionados.length > 1 ? 's' : ''}`}
+                            </span>
+                            <ChevronDown size={16} className={`text-gray-400 transition-transform ${openUserDropdown === 'vencimento' ? 'rotate-180' : ''}`} />
+                          </button>
                           
-                          {tempVencimentoForm.usuarioSearch && getFilteredUsuarios(tempVencimentoForm.usuarioSearch).length > 0 && (
-                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                              {getFilteredUsuarios(tempVencimentoForm.usuarioSearch).map((usuario) => (
-                                <button
-                                  key={usuario.id}
-                                  type="button"
-                                  onClick={() => {
-                                    addUsuarioVencimento(usuario);
-                                    setTempVencimentoForm(prev => ({...prev, usuarioSearch: ''}));
-                                  }}
-                                  className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
-                                >
-                                  <div className="font-medium text-gray-900 text-sm">{usuario.name}</div>
-                                </button>
-                              ))}
+                          {openUserDropdown === 'vencimento' && (
+                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                              {/* Campo de busca dentro do dropdown */}
+                              <div className="p-2 border-b border-gray-200">
+                                <input
+                                  type="text"
+                                  value={userSearchVencimento}
+                                  onChange={(e) => setUserSearchVencimento(e.target.value)}
+                                  className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  placeholder="Buscar usuário..."
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              
+                              {/* Lista de usuários com checkboxes */}
+                              <div className="max-h-48 overflow-y-auto">
+                                {sistemaUsuarios
+                                  .filter(usuario => 
+                                    usuario.name.toLowerCase().includes(userSearchVencimento.toLowerCase())
+                                  )
+                                  .map((usuario) => (
+                                    <label
+                                      key={usuario.id}
+                                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={tempVencimentoForm.usuariosSelecionados.some(u => u.id === usuario.id)}
+                                        onChange={() => toggleUsuarioVencimento(usuario)}
+                                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                      />
+                                      <span>{usuario.name}</span>
+                                    </label>
+                                  ))}
+                              </div>
                             </div>
                           )}
                         </div>
