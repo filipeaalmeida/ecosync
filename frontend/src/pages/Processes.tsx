@@ -526,7 +526,7 @@ const Processes: React.FC = () => {
                                         onClick={() => handleDelete(process.id)}
                                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                                       >
-                                        Remover este processo
+                                        Remover
                                       </button>
                                     </div>
                                   </div>

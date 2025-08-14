@@ -3,6 +3,7 @@ import { Search, ChevronDown, X, Filter, Download } from 'lucide-react';
 import Header from '../components/Header';
 import Pagination from '../components/Pagination';
 import TabelaExigencias, { Exigencia } from '../components/TabelaExigencias';
+import RequirementModal from '../components/RequirementModal';
 
 interface FilterState {
   status: string[];
@@ -19,7 +20,14 @@ const Exigencias: React.FC = () => {
   const [atribuidoSearch, setAtribuidoSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [exigenciaToDelete, setExigenciaToDelete] = useState<number | null>(null);
   const filterRef = useRef<HTMLDivElement>(null);
+  
+  // Estados para o modal de edição
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedExigencia, setSelectedExigencia] = useState<Exigencia | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   
   const [filters, setFilters] = useState<FilterState>({
     status: [],
@@ -97,7 +105,47 @@ const Exigencias: React.FC = () => {
   }, []);
 
   const handleEditarExigencia = (id: number) => {
-    console.log(`Editar exigência ${id}`);
+    console.log('handleEditarExigencia chamado com id:', id);
+    const exigencia = exigencias.find(e => e.id === id);
+    if (exigencia) {
+      console.log('Exigencia encontrada:', exigencia);
+      setSelectedExigencia(exigencia);
+      setModalMode('edit');
+      setIsModalOpen(true);
+      console.log('Modal deve estar aberto agora');
+    }
+  };
+
+  const handleSaveExigencia = (exigenciaData: Exigencia) => {
+    console.log('Salvando exigência:', exigenciaData);
+    if (modalMode === 'create') {
+      console.log('Criando nova exigência');
+      // Aqui seria feita a chamada ao backend para criar
+    } else if (modalMode === 'edit') {
+      console.log('Atualizando exigência existente');
+      // Aqui seria feita a chamada ao backend para atualizar
+    }
+    setIsModalOpen(false);
+    setSelectedExigencia(null);
+  };
+
+  const handleRemoverExigencia = (id: number) => {
+    setExigenciaToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (exigenciaToDelete) {
+      console.log(`Removendo exigência ${exigenciaToDelete}`);
+      // Aqui será feita a chamada ao backend para remover a exigência
+      setShowDeleteModal(false);
+      setExigenciaToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setExigenciaToDelete(null);
   };
 
   const handleDownloadXLSX = () => {
@@ -460,6 +508,7 @@ const Exigencias: React.FC = () => {
               <TabelaExigencias 
                 exigencias={currentExigencias}
                 onEditarExigencia={handleEditarExigencia}
+                onRemoverExigencia={handleRemoverExigencia}
                 showProcessoLink={true}
               />
             </div>
@@ -479,6 +528,73 @@ const Exigencias: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Edição/Criação de Exigência */}
+      <RequirementModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedExigencia(null);
+        }}
+        onSave={handleSaveExigencia}
+        exigencia={selectedExigencia}
+        mode={modalMode}
+      />
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-[512px] w-full mx-4">
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h2 className="text-[#0d141c] text-xl font-bold">Remover Exigência</h2>
+              <button
+                onClick={cancelDelete}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+                  <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
+                </svg>
+              </button>
+            </div>
+
+            {/* Corpo do Modal */}
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#ef4444" viewBox="0 0 256 256">
+                    <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Tem certeza que deseja remover esta exigência?
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    <strong>Atenção:</strong> Esta exigência será permanentemente removida do processo. 
+                    Esta ação não pode ser desfeita.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                >
+                  Sim, remover exigência
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ChangePasswordModal from './ChangePasswordModal';
 
 interface AccountMenuProps {
   userName?: string;
@@ -13,6 +14,7 @@ const AccountMenu: React.FC<AccountMenuProps> = ({
   userRole = 'Administrador'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -30,7 +32,7 @@ const AccountMenu: React.FC<AccountMenuProps> = ({
   }, []);
 
   const handleChangePassword = () => {
-    console.log('Alterar senha');
+    setIsPasswordModalOpen(true);
     setIsOpen(false);
   };
 
@@ -96,6 +98,11 @@ const AccountMenu: React.FC<AccountMenuProps> = ({
           </div>
         </div>
       )}
+      
+      <ChangePasswordModal 
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </div>
   );
 };

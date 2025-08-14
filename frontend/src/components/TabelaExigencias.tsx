@@ -15,13 +15,15 @@ export interface Exigencia {
 interface TabelaExigenciasProps {
   exigencias: Exigencia[];
   onEditarExigencia?: (id: number) => void;
+  onRemoverExigencia?: (id: number) => void;
   showProcessoLink?: boolean;
 }
 
 const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({ 
   exigencias, 
   onEditarExigencia,
-  showProcessoLink = true 
+  onRemoverExigencia,
+  showProcessoLink = true
 }) => {
   const navigate = useNavigate();
   const [editingStatusId, setEditingStatusId] = useState<number | null>(null);
@@ -60,6 +62,9 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
       }
       setEditingAtribuidoId(id);
       setOpenMenuId(null);
+    } else if (acao === 'remover' && onRemoverExigencia) {
+      onRemoverExigencia(id);
+      setOpenMenuId(null);
     } else {
       console.log(`Ação: ${acao} para exigência ${id}`);
     }
@@ -79,16 +84,17 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
   }, []);
 
   return (
-    <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-white">
-      <div className="overflow-x-auto w-full">
-        <table className="w-full">
+    <>
+      <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full">
           <thead>
             <tr className="bg-slate-50">
               <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[300px]">Descrição</th>
               <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[150px]">Processo</th>
               <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[120px]">Prazo</th>
               <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[130px]">Status</th>
-              <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[150px]">Atribuído a</th>
+              <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal min-w-[150px]">Responsável</th>
               <th className="px-4 py-3 text-center text-[#0d141c] text-sm font-medium leading-normal w-[60px]">Ações</th>
             </tr>
           </thead>
@@ -208,7 +214,13 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
                             onClick={() => handleAcao('editar-atribuido', exigencia.id)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
                           >
-                            Editar Atribuído
+                            Editar Responsável
+                          </button>
+                          <button
+                            onClick={() => handleAcao('remover', exigencia.id)}
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
+                          >
+                            Remover
                           </button>
                         </div>
                       )}
@@ -221,6 +233,7 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
         </table>
       </div>
     </div>
+    </>
   );
 };
 
