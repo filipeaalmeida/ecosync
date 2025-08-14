@@ -1,0 +1,14 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+PyYAML==6.0.1
+firebase-admin==6.2.0
+google-cloud-firestore==2.13.1
+google-cloud-storage==2.10.0
+pydantic==2.5.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+httpx==0.25.1
+pytest==7.4.3
+pytest-asyncio==0.21.1
+genai==0.8.0

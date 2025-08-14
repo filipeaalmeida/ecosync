@@ -16,6 +16,10 @@ build/
 env.py
 *.env
 
+# Deploy environment files
+backend/deploy/env-vars-dev-gcloud.yaml
+backend/deploy/env-vars-prod-gcloud.yaml
+
 # IDE
 .vscode/
 .idea/

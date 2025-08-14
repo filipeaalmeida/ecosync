@@ -2,61 +2,63 @@
 
 ## Arquivos de Deploy
 
-- **`cloudbuild.yaml`**: Configuração do Cloud Build para deploy automático
-- **`env-vars-prod.yaml`**: Variáveis de ambiente de produção (não versionado)
-- **`env-vars-prod.yaml.example`**: Template das variáveis de ambiente
+- **`deploy-backend.sh`**: Script simplificado de deploy direto do source
+- **`env-vars-prod-gcloud.yaml`**: Variáveis de ambiente de produção (não versionado)
+- **`env-vars-dev-gcloud.yaml`**: Variáveis de ambiente de desenvolvimento (não versionado)
+- **`env-vars.yaml.example`**: Template das variáveis de ambiente
 
 ## Como Fazer o Deploy
 
-### 1. Configurar o Projeto no GCP
+### 1. Configurar Variáveis de Ambiente
 ```bash
-# Definir projeto
-gcloud config set project ecosync-project
+# Criar arquivos de configuração baseados no template
+cp env-vars.yaml.example env-vars-prod-gcloud.yaml
+cp env-vars.yaml.example env-vars-dev-gcloud.yaml
 
-# Habilitar APIs necessárias
-gcloud services enable cloudbuild.googleapis.com
-gcloud services enable run.googleapis.com
-gcloud services enable containerregistry.googleapis.com
+# Editar os arquivos com os valores corretos para cada ambiente
 ```
 
-### 2. Configurar Variáveis de Ambiente
+### 2. Deploy Simples
 ```bash
-# Copiar template e preencher com valores reais
-cp env-vars-prod.yaml.example env-vars-prod.yaml
-# Editar env-vars-prod.yaml com seus valores
+# Deploy para produção (default)
+./deploy-backend.sh
+
+# Deploy para desenvolvimento
+./deploy-backend.sh dev
 ```
 
-### 3. Adicionar Credenciais do Firebase
-Coloque o arquivo `serviceAccountKey.json` na raiz do backend antes do deploy.
-
-### 4. Deploy Manual
+### 3. Deploy Manual com gcloud
 ```bash
-# Da pasta backend/deploy
-gcloud builds submit --config=cloudbuild.yaml ..
+# O script executa internamente este comando:
+gcloud run deploy ecosync-backend \
+  --source ../ \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --cpu 1 \
+  --timeout 1800 \
+  --min-instances 0 \
+  --max-instances 10 \
+  --env-vars-file env-vars-prod-gcloud.yaml
 ```
-
-### 5. Deploy Automático (CI/CD)
-Configure um Cloud Build Trigger no Console do GCP:
-1. Cloud Build > Triggers
-2. Criar trigger
-3. Conectar repositório
-4. Arquivo de configuração: `backend/deploy/cloudbuild.yaml`
-5. Configurar substitutions se necessário
 
 ## Variáveis de Ambiente
 
-Todas as variáveis estão definidas em `env-vars-prod.yaml` (não versionado) e são configuradas automaticamente pelo `cloudbuild.yaml`.
-
-Para atualizar variáveis após o deploy:
-```bash
-gcloud run services update ecosync-backend \
-  --update-env-vars KEY=value \
-  --region=us-central1
-```
+As variáveis são carregadas dos arquivos `env-vars-*-gcloud.yaml`:
+- Formato simples: `KEY: "value"`
+- Não usar variável `PORT` (definida automaticamente pelo Cloud Run)
+- Arquivos não são versionados (estão no .gitignore)
 
 ## URLs de Produção
 
-Após o deploy, o Cloud Run fornecerá uma URL como:
-- `https://ecosync-backend-xxxxx-uc.a.run.app`
+Após o deploy, o Cloud Run fornecerá URLs como:
+- **Produção**: `https://ecosync-backend-687164090326.us-central1.run.app`
+- **Desenvolvimento**: `https://ecosync-backend-xxxxx-uc.a.run.app`
 
-Configure esta URL no frontend para consumir a API.
+Configure estas URLs no frontend para consumir a API.
+
+## Endpoints Disponíveis
+
+- `GET /` - Informações básicas da API
+- `GET /health` - Healthcheck com status dos serviços (Firestore, Storage)
