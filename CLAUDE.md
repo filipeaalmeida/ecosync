@@ -9,6 +9,7 @@
 - Todo o desenvolvimento do frontend deve ser feito na pasta `frontend`
 - **Header**: Usar sempre o componente `Header` existente em `src/components/Header.tsx`. Nunca desenvolva um novo header.
 - **Tabelas com dados do backend**: Toda tabela que buscar dados do backend DEVE implementar paginação. Use o componente `Pagination` (a ser criado em `src/components/Pagination.tsx`) para padronizar a paginação em todas as tabelas.
+- **Autenticação**: O frontend NÃO deve verificar se o usuário está autenticado, apenas no momento do login. Quando o backend retornar erro 401 (não autorizado), o frontend deve redirecionar imediatamente para a tela de login. Para isso, TODAS as chamadas de API devem usar EXCLUSIVAMENTE a função `apiCall` de `src/services/api.ts`, que automaticamente intercepta erros 401 e redireciona para `/login`.
 - Tecnologia: React com TypeScript e Tailwind CSS
 - **Verificação de código**: Após terminar qualquer desenvolvimento no frontend, SEMPRE executar:
   ```bash
@@ -73,3 +74,9 @@ backend/
 - **NUNCA** modifique o script para ser interativo - ele deve rodar completamente automatizado
 - Configurações de projeto estão no topo do script e devem ser editadas conforme necessário
 - O script configura Firebase, GCP APIs, IAM, Storage e Cloud Run automaticamente
+- para desenvolvimento local, usar Application Default Credentials (ADC) da GCP e Firebase. NUNCA utilizar credenciais.
+
+### Credenciais de Teste
+Para fazer login no sistema durante desenvolvimento e testes, sempre use o usuário abaixo:
+- **Email**: `filipe@synapses.digital`
+- **Senha**: `Senha12345!`

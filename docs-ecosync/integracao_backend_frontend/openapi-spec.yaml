@@ -1,0 +1,1505 @@
+openapi: 3.1.0
+info:
+  title: EcoSync API
+  description: API para o sistema de gestão de processos e exigências ambientais EcoSync (Sistema Multi-tenant)
+  version: 2.0.0
+  contact:
+    name: EcoSync Team
+    email: contato@ecosync.com
+servers:
+  - url: http://localhost:8080
+    description: Servidor de desenvolvimento
+  - url: https://api.ecosync.com
+    description: Servidor de produção
+
+paths:
+  # Autenticação (somente GET /me - demais são Firebase)
+  /api/auth/me:
+    get:
+      tags: [Autenticação]
+      summary: Obter dados do usuário autenticado
+      description: "Login, logout, cadastro, reset e alteração de senha são gerenciados pelo Firebase Auth"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dados do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Usuários
+  /api/usuarios:
+    get:
+      tags: [Usuários]
+      summary: Listar usuários do sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Termo de busca por nome ou email
+          schema:
+            type: string
+        - name: ativo
+          in: query
+          description: Filtrar por usuários ativos/inativos
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usuarios:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Busca
+  /api/search:
+    get:
+      tags: [Busca]
+      summary: Busca global no sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Termo de busca
+          schema:
+            type: string
+            minLength: 2
+        - name: tipo
+          in: query
+          description: Tipo específico de resultado
+          schema:
+            type: string
+            enum: [licencas, exigencias, documentos]
+      responses:
+        '200':
+          description: Resultados da busca
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resultados:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "abc123"
+                        tipo:
+                          type: string
+                          example: "processo"
+                        titulo:
+                          type: string
+                          example: "LO_CIRANDA_02"
+                        descricao:
+                          type: string
+                          example: "Licença de Operação"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # Processos
+  /api/processos:
+    get:
+      tags: [Processos]
+      summary: Listar processos com paginação e filtros
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: search
+          in: query
+          description: Termo de busca
+          schema:
+            type: string
+        - name: data_emissao_inicio
+          in: query
+          description: Data de emissão início (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: data_emissao_fim
+          in: query
+          description: Data de emissão fim (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: data_validade_inicio
+          in: query
+          description: Data de validade início (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: data_validade_fim
+          in: query
+          description: Data de validade fim (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: data_renovacao_inicio
+          in: query
+          description: Data de renovação início (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: data_renovacao_fim
+          in: query
+          description: Data de renovação fim (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista paginada de processos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      processos:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProcessoListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Processos]
+      summary: Criar novo processo com análise IA
+      description: Recebe o file_id do arquivo já enviado para o storage e processa sincronamente com IA
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [file_id]
+              properties:
+                file_id:
+                  type: string
+                  description: ID do arquivo PDF já enviado para o Firebase Storage
+                  example: "file_abc123"
+      responses:
+        '201':
+          description: Processo criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "proc123"
+                  processo:
+                    $ref: '#/components/schemas/AnaliseIAResponse'
+                  message:
+                    type: string
+                    example: "Processo criado com sucesso"
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/processos/upload-url:
+    get:
+      tags: [Processos]
+      summary: Obter URL assinada para upload de PDF
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filename
+          in: query
+          required: true
+          description: Nome do arquivo
+          schema:
+            type: string
+            example: "processo.pdf"
+        - name: content_type
+          in: query
+          required: true
+          description: Tipo de conteúdo
+          schema:
+            type: string
+            example: "application/pdf"
+      responses:
+        '200':
+          description: URL assinada para upload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload_url:
+                    type: string
+                    example: "https://storage.googleapis.com/signed-url"
+                  file_id:
+                    type: string
+                    example: "file_abc123"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processos/{id}:
+    get:
+      tags: [Processos]
+      summary: Obter dados específicos de um processo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do processo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dados do processo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags: [Processos]
+      summary: Atualizar dados de um processo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do processo
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessoUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [Processos]
+      summary: Remover um processo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do processo
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processos/{id}/download-url:
+    get:
+      tags: [Processos]
+      summary: Obter URL assinada para download do PDF
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do processo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: URL assinada para download
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  download_url:
+                    type: string
+                    example: "https://storage.googleapis.com/signed-url"
+                  expires_in:
+                    type: integer
+                    description: Tempo de expiração em segundos
+                    example: 3600
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/processos/{id}/notificacoes:
+    get:
+      tags: [Notificações]
+      summary: Obter regras de notificação de um processo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do processo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Regras de notificação do processo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  regras:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConfiguracaoNotificacaoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Notificações]
+      summary: Criar regra de notificação (consolidado)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do processo
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfiguracaoNotificacaoRequest'
+      responses:
+        '201':
+          description: Regra criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "rule123"
+                  message:
+                    type: string
+                    example: "Regra de notificação criada com sucesso"
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/processos/notificacoes/{id}:
+    delete:
+      tags: [Notificações]
+      summary: Remover regra de notificação
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da regra de notificação
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Exigências
+  /api/exigencias:
+    get:
+      tags: [Exigências]
+      summary: Listar exigências com paginação e filtros
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: search
+          in: query
+          description: Termo de busca
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filtro por status (array de IDs)
+          schema:
+            type: array
+            items:
+              type: string
+              example: "em-progresso"
+        - name: processo_id
+          in: query
+          description: Filtro por processo específico
+          schema:
+            type: string
+            example: "proc123"
+        - name: responsavel
+          in: query
+          description: Filtro por responsável (array de UIDs)
+          schema:
+            type: array
+            items:
+              type: string
+              example: "user123"
+        - name: prazo_inicio
+          in: query
+          description: Prazo início (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: prazo_fim
+          in: query
+          description: Prazo fim (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista paginada de exigências
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      exigencias:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExigenciaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Exigências]
+      summary: Criar nova exigência
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExigenciaCreateRequest'
+      responses:
+        '201':
+          description: Exigência criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 123
+                  message:
+                    type: string
+                    example: "Exigência criada com sucesso"
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/exigencias/status:
+    get:
+      tags: [Exigências]
+      summary: Obter lista de status possíveis
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "nao-iniciado"
+                        nome:
+                          type: string
+                          example: "Não Iniciado"
+                        cor:
+                          type: string
+                          example: "#6b7280"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/exigencias/{id}:
+    put:
+      tags: [Exigências]
+      summary: Atualizar exigência
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da exigência
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExigenciaUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [Exigências]
+      summary: Remover exigência
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da exigência
+          schema:
+            type: integer
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/exigencias/{id}/status:
+    patch:
+      tags: [Exigências]
+      summary: Alterar status da exigência
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da exigência
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  description: ID do status
+                  example: "em-progresso"
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/exigencias/{id}/responsavel:
+    patch:
+      tags: [Exigências]
+      summary: Alterar responsável da exigência
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da exigência
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [responsavel]
+              properties:
+                responsavel:
+                  type: string
+                  description: UID do usuário responsável
+                  example: "user123"
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/exigencias/export:
+    get:
+      tags: [Exigências]
+      summary: Exportar exigências para XLSX
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Termo de busca
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filtro por status (array de IDs)
+          schema:
+            type: array
+            items:
+              type: string
+              example: "em-progresso"
+        - name: processo_id
+          in: query
+          description: Filtro por processo específico
+          schema:
+            type: string
+            example: "proc123"
+        - name: responsavel
+          in: query
+          description: Filtro por responsável (array de UIDs)
+          schema:
+            type: array
+            items:
+              type: string
+              example: "user123"
+        - name: prazo_inicio
+          in: query
+          description: Prazo início (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: prazo_fim
+          in: query
+          description: Prazo fim (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Arquivo XLSX com exigências
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Notificações
+  /api/notificacoes:
+    get:
+      tags: [Notificações]
+      summary: Listar notificações do usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lidas
+          in: query
+          description: Filtrar por notificações lidas/não lidas
+          schema:
+            type: boolean
+        - name: tipos
+          in: query
+          description: Filtrar por tipos de notificação
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [exigencia_prazo, exigencia_vencida, renovacao_prazo, atribuicao]
+      responses:
+        '200':
+          description: Lista de notificações
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notificacoes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NotificacaoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notificacoes/resumo:
+    get:
+      tags: [Notificações]
+      summary: Obter resumo de notificações para dropdown
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limite
+          in: query
+          description: Número máximo de notificações
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: Resumo das notificações
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notificacoes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NotificacaoResponse'
+                  total_nao_lidas:
+                    type: integer
+                    example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notificacoes/{id}/marcar-lida:
+    patch:
+      tags: [Notificações]
+      summary: Marcar notificação como lida/não lida
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da notificação
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lida]
+              properties:
+                lida:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notificacoes/marcar-todas-lidas:
+    patch:
+      tags: [Notificações]
+      summary: Marcar todas notificações como lidas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Número da página (inicia em 1)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      description: Número de itens por página
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+
+  responses:
+    Success:
+      description: Operação realizada com sucesso
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Operação realizada com sucesso"
+              success:
+                type: boolean
+                example: true
+
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Token de autenticação inválido ou ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+            
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ValidationError:
+      description: Erro de validação nos dados enviados
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Dados inválidos"
+              success:
+                type: boolean
+                example: false
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      example: "email"
+                    message:
+                      type: string
+                      example: "Campo obrigatório"
+
+  schemas:
+    # Campos obrigatórios padrão (incluídos em todos os modelos)
+    BaseModel:
+      type: object
+      required:
+        - data_criacao
+        - data_atualizacao
+        - idEmpresa
+      properties:
+        data_criacao:
+          type: string
+          format: date-time
+          description: Data e hora de criação do registro (UTC-3)
+          example: "2024-08-14T10:30:00-03:00"
+        data_atualizacao:
+          type: string
+          format: date-time
+          description: Data e hora da última atualização do registro (UTC-3)
+          example: "2024-08-14T15:45:00-03:00"
+        idEmpresa:
+          type: string
+          description: Identificador da empresa (sistema multi-tenant)
+          example: "empresa123"
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Erro ao processar requisição"
+        success:
+          type: boolean
+          example: false
+        details:
+          type: string
+          example: "Detalhes específicos do erro"
+
+    PaginatedResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total de registros
+          example: 150
+        page:
+          type: integer
+          description: Página atual
+          example: 1
+        pages:
+          type: integer
+          description: Total de páginas
+          example: 15
+        has_next:
+          type: boolean
+          description: Indica se há próxima página
+          example: true
+        has_prev:
+          type: boolean
+          description: Indica se há página anterior
+          example: false
+
+    UsuarioResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseModel'
+        - type: object
+          properties:
+            uid:
+              type: string
+              example: "user123"
+            nome:
+              type: string
+              example: "João Silva"
+            email:
+              type: string
+              format: email
+              example: "joao@ecosync.com"
+            perfil:
+              type: string
+              example: "Administrador"
+            permissoes:
+              type: array
+              items:
+                type: string
+              description: Lista de permissões do usuário baseadas no perfil
+              example: ["criar", "editar", "excluir", "visualizar", "gerenciar-usuarios"]
+            ativo:
+              type: boolean
+              example: true
+
+    ProcessoListResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "proc123"
+        numero_processo:
+          type: string
+          example: "LO_CIRANDA_02"
+        razao_social:
+          type: string
+          example: "CIRANDA 4 ENERGIAS RENOVÁVEIS S.A."
+        data_emissao:
+          type: string
+          format: date
+          example: "2022-12-27"
+        data_validade:
+          type: string
+          format: date
+          example: "2023-12-27"
+        prazo_renovacao:
+          type: string
+          format: date
+          example: "2023-08-29"
+
+    ProcessoResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseModel'
+        - type: object
+          properties:
+            id:
+              type: string
+              example: "proc123"
+            numero_processo:
+              type: string
+              example: "LO_CIRANDA_02"
+            tipo:
+              type: string
+              example: "LICENÇA DE OPERAÇÃO"
+            razao_social:
+              type: string
+              example: "CIRANDA 4 ENERGIAS RENOVÁVEIS S.A."
+            municipio:
+              type: string
+              example: "São José do Belmonte - PE"
+            caracterizacao:
+              type: string
+              example: "O empreendimento enquadra-se na Tipologia..."
+            data_emissao:
+              type: string
+              format: date
+              example: "2022-12-27"
+            data_validade:
+              type: string
+              format: date
+              example: "2023-12-27"
+            prazo_renovacao:
+              type: string
+              format: date
+              example: "2023-08-29"
+            observacoes:
+              type: string
+              nullable: true
+              example: ""
+            notificar_atribuicao_sistema:
+              type: boolean
+              example: false
+            notificar_atribuicao_email:
+              type: boolean
+              example: false
+            usuario_criacao:
+              type: string
+              example: "user123"
+
+    ProcessoUpdateRequest:
+      type: object
+      required:
+        - numero_processo
+        - tipo
+        - razao_social
+        - municipio
+        - caracterizacao
+        - data_emissao
+        - data_validade
+        - prazo_renovacao
+      properties:
+        numero_processo:
+          type: string
+          example: "LO_CIRANDA_02"
+        tipo:
+          type: string
+          example: "LICENÇA DE OPERAÇÃO"
+        razao_social:
+          type: string
+          example: "CIRANDA 4 ENERGIAS RENOVÁVEIS S.A."
+        municipio:
+          type: string
+          example: "São José do Belmonte - PE"
+        caracterizacao:
+          type: string
+          example: "O empreendimento enquadra-se na Tipologia..."
+        data_emissao:
+          type: string
+          format: date
+          example: "2022-12-27"
+        data_validade:
+          type: string
+          format: date
+          example: "2023-12-27"
+        prazo_renovacao:
+          type: string
+          format: date
+          example: "2023-08-29"
+        observacoes:
+          type: string
+          nullable: true
+        notificar_atribuicao_sistema:
+          type: boolean
+          default: false
+        notificar_atribuicao_email:
+          type: boolean
+          default: false
+
+    AnaliseIAResponse:
+      type: object
+      properties:
+        numero_processo:
+          type: string
+          example: "LO_CIRANDA_02"
+        tipo:
+          type: string
+          example: "LICENÇA DE OPERAÇÃO"
+        razao_social:
+          type: string
+          example: "CIRANDA 4 ENERGIAS RENOVÁVEIS S.A."
+        municipio:
+          type: string
+          example: "São José do Belmonte - PE"
+        caracterizacao:
+          type: string
+          example: "O empreendimento enquadra-se na Tipologia..."
+        data_emissao:
+          type: string
+          format: date
+          example: "2022-12-27"
+        data_validade:
+          type: string
+          format: date
+          example: "2023-12-27"
+        prazo_renovacao:
+          type: string
+          format: date
+          example: "2023-08-29"
+
+    ExigenciaResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseModel'
+        - type: object
+          properties:
+            id:
+              type: integer
+              example: 123
+            descricao_resumida:
+              type: string
+              example: "Relatório anual com demonstrações financeiras"
+            descricao:
+              type: string
+              example: "Apresentar relatório anual completo..."
+            prazo:
+              type: string
+              format: date
+              example: "2024-08-15"
+            status:
+              type: string
+              description: ID do status
+              example: "em-progresso"
+            responsavel:
+              type: string
+              description: UID do usuário responsável
+              example: "user123"
+            observacoes:
+              type: string
+              nullable: true
+              example: "Aguardando retorno da auditoria externa"
+            criado_por:
+              type: string
+              enum: [ia, usuario]
+              example: "ia"
+            usuario_criacao:
+              type: string
+              example: "user123"
+
+    ExigenciaCreateRequest:
+      type: object
+      required:
+        - descricao_resumida
+        - descricao
+        - processo
+        - prazo
+        - status
+        - responsavel
+      properties:
+        descricao_resumida:
+          type: string
+          minLength: 3
+          example: "Relatório anual com demonstrações financeiras"
+        descricao:
+          type: string
+          minLength: 10
+          example: "Apresentar relatório anual completo com demonstrações financeiras auditadas..."
+        processo:
+          type: string
+          example: "LO_CIRANDA_02"
+        prazo:
+          type: string
+          format: date
+          example: "2024-08-15"
+        status:
+          type: string
+          description: ID do status
+          example: "nao-iniciado"
+        responsavel:
+          type: string
+          description: UID do usuário responsável
+          example: "user123"
+        observacoes:
+          type: string
+          nullable: true
+
+    ExigenciaUpdateRequest:
+      type: object
+      required:
+        - descricao_resumida
+        - descricao
+        - processo
+        - prazo
+        - status
+        - responsavel
+      properties:
+        descricao_resumida:
+          type: string
+          minLength: 3
+          example: "Relatório anual com demonstrações financeiras"
+        descricao:
+          type: string
+          minLength: 10
+          example: "Apresentar relatório anual completo com demonstrações financeiras auditadas..."
+        processo:
+          type: string
+          example: "LO_CIRANDA_02"
+        prazo:
+          type: string
+          format: date
+          example: "2024-08-15"
+        status:
+          type: string
+          description: ID do status
+          example: "em-progresso"
+        responsavel:
+          type: string
+          description: UID do usuário responsável
+          example: "user123"
+        observacoes:
+          type: string
+          nullable: true
+
+    NotificacaoResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseModel'
+        - type: object
+          properties:
+            id:
+              type: string
+              example: "notif123"
+            tipo:
+              type: string
+              enum: [exigencia_prazo, exigencia_vencida, renovacao_prazo, atribuicao]
+              example: "exigencia_prazo"
+            titulo:
+              type: string
+              example: "Exigência próxima do prazo"
+            prazo:
+              type: string
+              format: date
+              nullable: true
+              example: "2024-08-17"
+            dias_info:
+              type: string
+              nullable: true
+              example: "Vence em 3 dias"
+            atribuido_por:
+              type: string
+              nullable: true
+              description: UID do usuário que atribuiu
+              example: "user456"
+            data:
+              type: string
+              format: date
+              example: "2024-08-14"
+            hora:
+              type: string
+              format: time
+              example: "14:30"
+            lida:
+              type: boolean
+              example: false
+            exigencia_id:
+              type: integer
+              nullable: true
+              example: 123
+
+    ConfiguracaoNotificacaoRequest:
+      type: object
+      required:
+        - tipo_regra
+        - dias
+        - configuracoes
+      properties:
+        tipo_regra:
+          type: string
+          enum: [prazo_antecipado, renovacao_antecipada, vencimento]
+          example: "prazo_antecipado"
+        dias:
+          type: integer
+          minimum: 1
+          maximum: 365
+          example: 30
+        configuracoes:
+          type: object
+          properties:
+            criador:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  default: false
+                sistema:
+                  type: boolean
+                  default: false
+                email:
+                  type: boolean
+                  default: false
+            responsavel:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  default: false
+                sistema:
+                  type: boolean
+                  default: false
+                email:
+                  type: boolean
+                  default: false
+            usuarios_adicionais:
+              type: array
+              items:
+                type: object
+                required:
+                  - usuario_id
+                properties:
+                  usuario_id:
+                    type: string
+                    example: "user456"
+                  sistema:
+                    type: boolean
+                    default: false
+                  email:
+                    type: boolean
+                    default: false
+
+    ConfiguracaoNotificacaoResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseModel'
+        - type: object
+          properties:
+            id:
+              type: string
+              example: "config123"
+            tipo_regra:
+              type: string
+              enum: [prazo_antecipado, renovacao_antecipada, vencimento]
+              example: "prazo_antecipado"
+            dias:
+              type: integer
+              example: 30
+            configuracoes:
+              type: object
+              properties:
+                criador:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      example: true
+                    sistema:
+                      type: boolean
+                      example: true
+                    email:
+                      type: boolean
+                      example: false
+                responsavel:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      example: true
+                    sistema:
+                      type: boolean
+                      example: true
+                    email:
+                      type: boolean
+                      example: true
+                usuarios_adicionais:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      usuario_id:
+                        type: string
+                        example: "user456"
+                      sistema:
+                        type: boolean
+                        example: true
+                      email:
+                        type: boolean
+                        example: false
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Autenticação
+    description: Operações de autenticação (Firebase Auth para login/logout/reset/alteração de senha)
+  - name: Usuários
+    description: Gestão de usuários do sistema
+  - name: Busca
+    description: Busca global no sistema
+  - name: Processos
+    description: Gestão de processos de licenciamento
+  - name: Exigências
+    description: Gestão de exigências dos processos
+  - name: Notificações
+    description: Sistema de notificações e alertas

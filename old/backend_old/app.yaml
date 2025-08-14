@@ -1,7 +1,0 @@
-service: backend
-runtime: python39  # Use a versão do Python que você está usando
-entrypoint: gunicorn -b :$PORT api:app  # Ajuste para o seu ponto de entrada
-
-handlers:
-- url: /.*
-  script: auto

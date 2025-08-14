@@ -15,15 +15,21 @@ def initialize_firebase():
         # Usar credenciais padrão do ambiente (ADC - Application Default Credentials)
         # No Cloud Run, usa automaticamente a service account configurada
         # No desenvolvimento local, usa gcloud auth application-default login
-        firebase_admin.initialize_app(options={
-            'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET")
-        })
+        storage_bucket = os.getenv("FIREBASE_STORAGE_BUCKET")
+        options = {}
+        if storage_bucket:
+            options['storageBucket'] = storage_bucket
+        
+        firebase_admin.initialize_app(options=options)
     
     # Inicializar Firestore
     _db = firestore.client()
     
-    # Inicializar Storage
-    _bucket = storage.bucket()
+    # Inicializar Storage apenas se o bucket estiver configurado
+    if os.getenv("FIREBASE_STORAGE_BUCKET"):
+        _bucket = storage.bucket()
+    else:
+        _bucket = None
     
     return _db, _bucket
 
@@ -39,6 +45,8 @@ def get_storage_bucket():
     global _bucket
     if _bucket is None:
         initialize_firebase()
+    if _bucket is None:
+        raise ValueError("Storage bucket não configurado. Configure FIREBASE_STORAGE_BUCKET")
     return _bucket
 
 def verify_firebase_token(id_token: str):

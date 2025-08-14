@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
-# from app.routers import auth, processos, licencas, exigencias, dashboard
+from app.routers import auth
 from app.utils.firebase import initialize_firebase
 from app.utils.env_loader import load_env_from_yaml
 
@@ -27,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Incluir routers
+app.include_router(auth.router)
 
 @app.get("/")
 async def root():
