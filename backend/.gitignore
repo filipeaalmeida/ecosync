@@ -40,6 +40,8 @@ ENV/
 .env
 .env.local
 .env.production
+deploy/env-vars-prod.yaml
+deploy/env-vars-dev.yaml
 
 # Firebase
 serviceAccountKey.json

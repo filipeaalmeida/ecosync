@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 import os
 
 from app.routers import auth, processos, licencas, exigencias, dashboard
 from app.utils.firebase import initialize_firebase
+from app.utils.env_loader import load_env_from_yaml
 
-# Carregar variáveis de ambiente
-load_dotenv()
+# Carregar variáveis de ambiente do YAML
+load_env_from_yaml()
 
 # Inicializar Firebase
 initialize_firebase()
@@ -28,13 +28,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir routers
-app.include_router(auth.router, prefix="/api/auth", tags=["Autenticação"])
-app.include_router(processos.router, prefix="/api/processos", tags=["Processos"])
-app.include_router(licencas.router, prefix="/api/licencas", tags=["Licenças"])
-app.include_router(exigencias.router, prefix="/api/exigencias", tags=["Exigências"])
-app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
-
 @app.get("/")
 async def root():
     return {"message": "EcoSync API", "status": "online"}
@@ -45,5 +38,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8080))
+    port = int(os.getenv("PORT"))
     uvicorn.run(app, host="0.0.0.0", port=port)

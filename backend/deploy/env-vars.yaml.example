@@ -1,0 +1,22 @@
+# Template de variáveis de ambiente para produção
+# Copie este arquivo para env-vars-prod.yaml e preencha com valores reais
+# O arquivo env-vars-prod.yaml NÃO será commitado (está no .gitignore)
+
+env_variables:
+  # API
+  PORT: "8080"
+  ENVIRONMENT: "production"
+  
+  # CORS - Domínios permitidos (separados por vírgula)
+  ALLOWED_ORIGINS: "https://seu-frontend.web.app,https://seu-dominio.com.br"
+  
+  # Firebase - Substitua pelos valores do seu projeto
+  FIREBASE_STORAGE_BUCKET: "seu-projeto.appspot.com"
+  
+  # Configurações do projeto GCP
+  PROJECT_ID: "seu-projeto-gcp"
+  SERVICE_NAME: "ecosync-backend"
+  
+  # Gemini AI - Obtenha sua chave em https://aistudio.google.com/app/apikey
+  GEMINI_API_KEY: "sua-chave-gemini-aqui"
+  GEMINI_MODEL: "gemini-1.5-flash"

@@ -1,8 +1,8 @@
 # Cloud Build configuration for deploying to Cloud Run
 steps:
-  # Build the container image
+  # Build the container image (usando Dockerfile na pasta deploy)
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/ecosync-backend:$COMMIT_SHA', '.']
+    args: ['build', '-f', 'deploy/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/ecosync-backend:$COMMIT_SHA', '..']
   
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -23,11 +23,18 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'FIREBASE_STORAGE_BUCKET=$_FIREBASE_STORAGE_BUCKET'
+      - |
+        PORT=8080,
+        ENVIRONMENT=production,
+        FIREBASE_STORAGE_BUCKET=$_FIREBASE_STORAGE_BUCKET,
+        ALLOWED_ORIGINS=$_ALLOWED_ORIGINS,
+        PROJECT_ID=$PROJECT_ID,
+        SERVICE_NAME=ecosync-backend
 
-# Substitutions for environment variables
+# Substitutions - configure estes valores no Cloud Build Trigger
 substitutions:
-  _FIREBASE_STORAGE_BUCKET: 'your-project-id.appspot.com'
+  _FIREBASE_STORAGE_BUCKET: 'ecosync-project.appspot.com'
+  _ALLOWED_ORIGINS: 'https://ecosync-frontend.web.app'
 
 # Images to be pushed to Container Registry
 images:

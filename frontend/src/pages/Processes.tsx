@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import Pagination from '../components/Pagination';
+import DateIndicator from '../components/DateIndicator';
 
 interface Process {
   id: string;
@@ -8,17 +11,20 @@ interface Process {
   issueDate: string;
   expiryDate: string;
   renewalDeadline: string;
-  status: 'Ativo' | 'Expirado' | 'Pendente';
 }
 
 interface FilterState {
-  status: string[];
   company: string[];
   dateFrom: string;
   dateTo: string;
+  issueDateFrom: string;
+  issueDateTo: string;
+  renewalDateFrom: string;
+  renewalDateTo: string;
 }
 
 const Processes: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null);
@@ -26,6 +32,8 @@ const Processes: React.FC = () => {
   const [totalPages] = useState(10);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showAddProcessModal, setShowAddProcessModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [processToDelete, setProcessToDelete] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -34,10 +42,13 @@ const Processes: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [filters, setFilters] = useState<FilterState>({
-    status: [],
     company: [],
     dateFrom: '',
-    dateTo: ''
+    dateTo: '',
+    issueDateFrom: '',
+    issueDateTo: '',
+    renewalDateFrom: '',
+    renewalDateTo: ''
   });
 
   const [processes] = useState<Process[]>([
@@ -48,7 +59,6 @@ const Processes: React.FC = () => {
       issueDate: '01/01/2023',
       expiryDate: '15/01/2024',
       renewalDeadline: '15/12/2023',
-      status: 'Ativo',
     },
     {
       id: '2',
@@ -57,7 +67,6 @@ const Processes: React.FC = () => {
       issueDate: '01/01/2022',
       expiryDate: '31/12/2023',
       renewalDeadline: '30/11/2023',
-      status: 'Expirado',
     },
     {
       id: '3',
@@ -66,7 +75,6 @@ const Processes: React.FC = () => {
       issueDate: '01/07/2023',
       expiryDate: '30/06/2024',
       renewalDeadline: '30/05/2024',
-      status: 'Ativo',
     },
     {
       id: '4',
@@ -75,7 +83,6 @@ const Processes: React.FC = () => {
       issueDate: '15/03/2023',
       expiryDate: '15/03/2024',
       renewalDeadline: '15/02/2024',
-      status: 'Ativo',
     },
     {
       id: '5',
@@ -84,12 +91,10 @@ const Processes: React.FC = () => {
       issueDate: '01/12/2022',
       expiryDate: '30/11/2023',
       renewalDeadline: '30/10/2023',
-      status: 'Expirado',
     },
   ]);
 
   const companies = Array.from(new Set(processes.map(p => p.companyName)));
-  const statusOptions = ['Ativo', 'Expirado', 'Pendente'];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -117,12 +122,27 @@ const Processes: React.FC = () => {
   }, [currentPage, itemsPerPage, searchTerm, filters]);
 
   const handleEdit = (id: string) => {
-    console.log('Edit process:', id);
+    navigate(`/processos/editar/${id}`);
   };
 
   const handleDelete = (id: string) => {
-    console.log('Delete process:', id);
+    setProcessToDelete(id);
+    setShowDeleteModal(true);
     setOpenMenuId(null);
+  };
+
+  const confirmDelete = () => {
+    if (processToDelete) {
+      console.log('Delete process:', processToDelete);
+      // Aqui seria feita a lógica de deletar o processo
+      setShowDeleteModal(false);
+      setProcessToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setProcessToDelete(null);
   };
 
   const toggleMenu = (id: string) => {
@@ -133,18 +153,6 @@ const Processes: React.FC = () => {
     setOpenFilterDropdown(openFilterDropdown === filter ? null : filter);
   };
 
-  const handleStatusToggle = (status: string) => {
-    if (status === 'all') {
-      setFilters(prev => ({ ...prev, status: [] }));
-    } else {
-      setFilters(prev => ({
-        ...prev,
-        status: prev.status.includes(status)
-          ? prev.status.filter(s => s !== status)
-          : [...prev.status, status]
-      }));
-    }
-  };
 
   const handleCompanyToggle = (company: string) => {
     if (company === 'all') {
@@ -161,10 +169,13 @@ const Processes: React.FC = () => {
 
   const clearFilters = () => {
     setFilters({
-      status: [],
       company: [],
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      issueDateFrom: '',
+      issueDateTo: '',
+      renewalDateFrom: '',
+      renewalDateTo: ''
     });
     setSearchTerm('');
   };
@@ -238,63 +249,7 @@ const Processes: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Ativo':
-        return 'bg-green-100 text-green-800';
-      case 'Expirado':
-        return 'bg-red-100 text-red-800';
-      case 'Pendente':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
-  const checkDateStatus = (dateString: string) => {
-    const [day, month, year] = dateString.split('/').map(Number);
-    const date = new Date(year, month - 1, day);
-    const today = new Date();
-    const diffTime = date.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) {
-      return 'expired';
-    } else if (diffDays <= 30) {
-      return 'warning';
-    }
-    return 'normal';
-  };
-
-  const DateIndicator: React.FC<{ date: string }> = ({ date }) => {
-    const status = checkDateStatus(date);
-    
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-[#49739c] text-sm">{date}</span>
-        {status === 'expired' && (
-          <div className="group relative">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ef4444" viewBox="0 0 256 256">
-              <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,172Z"></path>
-            </svg>
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              Data vencida
-            </div>
-          </div>
-        )}
-        {status === 'warning' && (
-          <div className="group relative">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#eab308" viewBox="0 0 256 256">
-              <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z"></path>
-            </svg>
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              Vence em 30 dias ou menos
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="relative flex size-full min-h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden">
@@ -319,14 +274,15 @@ const Processes: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="flex gap-3 p-3 flex-wrap pr-4" ref={filterRef}>
+            <div className="flex flex-col gap-3 p-3 pr-4" ref={filterRef}>
+              {/* Filtro Data de Emissão */}
               <div className="relative">
                 <button 
-                  onClick={() => toggleFilterDropdown('status')}
-                  className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#e7edf4] pl-4 pr-2"
+                  onClick={() => toggleFilterDropdown('issueDate')}
+                  className="flex h-8 w-full items-center justify-between gap-x-2 rounded-lg bg-[#e7edf4] pl-4 pr-2"
                 >
                   <p className="text-[#0d141c] text-sm font-medium leading-normal">
-                    Status {filters.status.length > 0 && `(${filters.status.length})`}
+                    Data de Emissão {(filters.issueDateFrom || filters.issueDateTo) && '(1)'}
                   </p>
                   <div className="text-[#0d141c]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
@@ -334,39 +290,43 @@ const Processes: React.FC = () => {
                     </svg>
                   </div>
                 </button>
-                {openFilterDropdown === 'status' && (
-                  <div className="absolute top-10 left-0 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                    <div className="py-1">
-                      <label className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                {openFilterDropdown === 'issueDate' && (
+                  <div className="absolute top-10 left-0 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 p-3">
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">De:</label>
                         <input
-                          type="checkbox"
-                          checked={filters.status.length === 0}
-                          onChange={() => handleStatusToggle('all')}
-                          className="mr-2"
+                          type="date"
+                          value={filters.issueDateFrom}
+                          onChange={(e) => setFilters(prev => ({ ...prev, issueDateFrom: e.target.value }))}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
-                        Todos
-                      </label>
-                      <div className="border-t border-gray-200"></div>
-                      {statusOptions.map(status => (
-                        <label key={status} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={filters.status.includes(status)}
-                            onChange={() => handleStatusToggle(status)}
-                            className="mr-2"
-                          />
-                          {status}
-                        </label>
-                      ))}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Até:</label>
+                        <input
+                          type="date"
+                          value={filters.issueDateTo}
+                          onChange={(e) => setFilters(prev => ({ ...prev, issueDateTo: e.target.value }))}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button
+                        onClick={() => setOpenFilterDropdown(null)}
+                        className="w-full px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Aplicar
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
               
+              {/* Filtro Data de Validade */}
               <div className="relative">
                 <button 
                   onClick={() => toggleFilterDropdown('date')}
-                  className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#e7edf4] pl-4 pr-2"
+                  className="flex h-8 w-full items-center justify-between gap-x-2 rounded-lg bg-[#e7edf4] pl-4 pr-2"
                 >
                   <p className="text-[#0d141c] text-sm font-medium leading-normal">
                     Data de Validade {getDateFilterCount() > 0 && `(${getDateFilterCount()})`}
@@ -378,7 +338,7 @@ const Processes: React.FC = () => {
                   </div>
                 </button>
                 {openFilterDropdown === 'date' && (
-                  <div className="absolute top-10 left-0 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 p-3">
+                  <div className="absolute top-10 left-0 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 p-3">
                     <div className="space-y-2">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">De:</label>
@@ -409,13 +369,14 @@ const Processes: React.FC = () => {
                 )}
               </div>
               
+              {/* Filtro Prazo de Renovação */}
               <div className="relative">
                 <button 
-                  onClick={() => toggleFilterDropdown('company')}
-                  className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#e7edf4] pl-4 pr-2"
+                  onClick={() => toggleFilterDropdown('renewalDate')}
+                  className="flex h-8 w-full items-center justify-between gap-x-2 rounded-lg bg-[#e7edf4] pl-4 pr-2"
                 >
                   <p className="text-[#0d141c] text-sm font-medium leading-normal">
-                    Empresa {filters.company.length > 0 && `(${filters.company.length})`}
+                    Prazo de Renovação {(filters.renewalDateFrom || filters.renewalDateTo) && '(1)'}
                   </p>
                   <div className="text-[#0d141c]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
@@ -423,39 +384,43 @@ const Processes: React.FC = () => {
                     </svg>
                   </div>
                 </button>
-                {openFilterDropdown === 'company' && (
-                  <div className="absolute top-10 left-0 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                    <div className="py-1">
-                      <label className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                {openFilterDropdown === 'renewalDate' && (
+                  <div className="absolute top-10 left-0 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 p-3">
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">De:</label>
                         <input
-                          type="checkbox"
-                          checked={filters.company.length === 0}
-                          onChange={() => handleCompanyToggle('all')}
-                          className="mr-2"
+                          type="date"
+                          value={filters.renewalDateFrom}
+                          onChange={(e) => setFilters(prev => ({ ...prev, renewalDateFrom: e.target.value }))}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
-                        Todas
-                      </label>
-                      <div className="border-t border-gray-200"></div>
-                      {companies.map(company => (
-                        <label key={company} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={filters.company.includes(company)}
-                            onChange={() => handleCompanyToggle(company)}
-                            className="mr-2"
-                          />
-                          {company}
-                        </label>
-                      ))}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Até:</label>
+                        <input
+                          type="date"
+                          value={filters.renewalDateTo}
+                          onChange={(e) => setFilters(prev => ({ ...prev, renewalDateTo: e.target.value }))}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button
+                        onClick={() => setOpenFilterDropdown(null)}
+                        className="w-full px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Aplicar
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {(filters.status.length > 0 || filters.company.length > 0 || filters.dateFrom || filters.dateTo || searchTerm) && (
+              {/* Botão Limpar Filtros - logo abaixo dos filtros */}
+              {(filters.dateFrom || filters.dateTo || filters.issueDateFrom || filters.issueDateTo || filters.renewalDateFrom || filters.renewalDateTo || searchTerm) && (
                 <button
                   onClick={clearFilters}
-                  className="flex h-8 items-center justify-center gap-x-2 rounded-lg bg-red-50 text-red-600 px-3 hover:bg-red-100"
+                  className="flex h-8 w-full items-center justify-center gap-x-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
                     <path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z"></path>
@@ -463,6 +428,18 @@ const Processes: React.FC = () => {
                   <span className="text-sm font-medium">Limpar Filtros</span>
                 </button>
               )}
+
+              {/* Botão Filtrar - separado com margem */}
+              <div className="mt-4">
+                <button
+                  className="flex h-8 w-full items-center justify-center gap-x-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M230.6,49.53a8,8,0,0,0-6.21-1.47L32.3,96A8,8,0,0,0,28.63,110L80,133.17V200a8,8,0,0,0,13.44,5.85l28.84-28.84L162.83,196l51.11-148.59A8,8,0,0,0,230.6,49.53ZM96,190.91V144l21.47,10.73Zm18.41-13.84L64.09,151.91,32.42,112,201.08,70.89Z"></path>
+                  </svg>
+                  <span className="text-sm font-medium">Filtrar</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -498,9 +475,6 @@ const Processes: React.FC = () => {
                       <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal">
                         Prazo Renovação
                       </th>
-                      <th className="px-4 py-3 text-left text-[#0d141c] text-sm font-medium leading-normal">
-                        Status
-                      </th>
                       <th className="px-4 py-3 text-center text-[#0d141c] text-sm font-medium leading-normal">
                         Ações
                       </th>
@@ -525,11 +499,6 @@ const Processes: React.FC = () => {
                           </td>
                           <td className="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
                             <DateIndicator date={process.renewalDeadline} />
-                          </td>
-                          <td className="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
-                            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(process.status)}`}>
-                              {process.status}
-                            </span>
                           </td>
                           <td className="h-[72px] px-4 py-2 text-sm font-normal leading-normal relative">
                             <div className="flex justify-center gap-2" ref={openMenuId === process.id ? menuRef : null}>
@@ -574,80 +543,17 @@ const Processes: React.FC = () => {
             </div>
             
             {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700">Mostrar</span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-gray-700">itens por página</span>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handlePageChange(1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Primeira
-                </button>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Anterior
-                </button>
-                
-                <div className="flex gap-1">
-                  {[...Array(Math.min(5, totalPages))].map((_, idx) => {
-                    const pageNum = currentPage - 2 + idx;
-                    if (pageNum > 0 && pageNum <= totalPages) {
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`px-3 py-1 rounded-md ${
-                            currentPage === pageNum
-                              ? 'bg-blue-500 text-white'
-                              : 'hover:bg-gray-100'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-                
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Próxima
-                </button>
-                <button
-                  onClick={() => handlePageChange(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Última
-                </button>
-              </div>
-              
-              <div className="text-sm text-gray-700">
-                Página {currentPage} de {totalPages}
-              </div>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={processes.length}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={(items) => {
+                setItemsPerPage(items);
+                setCurrentPage(1);
+              }}
+            />
           </div>
         </div>
       </div>
@@ -769,6 +675,64 @@ const Processes: React.FC = () => {
                   Ao enviar, você concorda com nossos termos e condições.
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h2 className="text-red-600 text-xl font-bold">Confirmar Exclusão</h2>
+              <button
+                onClick={cancelDelete}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+                  <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
+                </svg>
+              </button>
+            </div>
+
+            {/* Corpo do Modal */}
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#ef4444" viewBox="0 0 256 256">
+                    <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Tem certeza que deseja remover este processo?
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    <strong>Atenção:</strong> Todos os dados do processo e suas respectivas exigências serão permanentemente apagados. 
+                    Esta ação não pode ser desfeita.
+                  </p>
+                  <p className="text-gray-600 text-sm leading-relaxed mt-2">
+                    Este processo deixará de ser contabilizado a partir da fatura referente ao próximo mês.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                >
+                  Sim, remover processo
+                </button>
+              </div>
             </div>
           </div>
         </div>
