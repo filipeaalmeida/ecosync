@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Exigencia } from './TabelaExigencias';
+import SearchableDropdown, { DropdownOption } from './SearchableDropdown';
 
 interface RequirementModalProps {
   isOpen: boolean;
@@ -26,39 +27,32 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof Exigencia, string>>>({});
-  const [showResponsavelDropdown, setShowResponsavelDropdown] = useState(false);
-  const [responsavelSearch, setResponsavelSearch] = useState('');
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [statusSearch, setStatusSearch] = useState('');
+  
+  // Opções para os dropdowns
+  const statusOptions: DropdownOption[] = [
+    { value: 'Não Iniciado', label: 'Não Iniciado', color: 'bg-gray-100 text-gray-800 border-gray-200' },
+    { value: 'Em Progresso', label: 'Em Progresso', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+    { value: 'Pendente', label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+    { value: 'Concluído', label: 'Concluído', color: 'bg-green-100 text-green-800 border-green-200' }
+  ];
   
   // Lista de usuários mockada - em produção virá do backend
-  const usuarios = [
-    'Maria Silva',
-    'João Santos',
-    'Ana Costa',
-    'Pedro Oliveira',
-    'Carla Mendes',
-    'Roberto Lima',
-    'Fernanda Souza',
-    'Lucas Pereira',
-    'Juliana Alves',
-    'Marcos Rodrigues'
+  const usuariosOptions: DropdownOption[] = [
+    { value: 'Maria Silva', label: 'Maria Silva' },
+    { value: 'João Santos', label: 'João Santos' },
+    { value: 'Ana Costa', label: 'Ana Costa' },
+    { value: 'Pedro Oliveira', label: 'Pedro Oliveira' },
+    { value: 'Carla Mendes', label: 'Carla Mendes' },
+    { value: 'Roberto Lima', label: 'Roberto Lima' },
+    { value: 'Fernanda Souza', label: 'Fernanda Souza' },
+    { value: 'Lucas Pereira', label: 'Lucas Pereira' },
+    { value: 'Juliana Alves', label: 'Juliana Alves' },
+    { value: 'Marcos Rodrigues', label: 'Marcos Rodrigues' }
   ];
   
-  const statusOptions = [
-    'Não Iniciado',
-    'Em Progresso',
-    'Pendente',
-    'Concluído'
-  ];
-  
-  const filteredUsuarios = usuarios.filter(usuario =>
-    usuario.toLowerCase().includes(responsavelSearch.toLowerCase())
-  );
-  
-  const filteredStatus = statusOptions.filter(status =>
-    status.toLowerCase().includes(statusSearch.toLowerCase())
-  );
+  // Estados para os valores selecionados nos dropdowns
+  const [selectedStatus, setSelectedStatus] = useState<DropdownOption | null>(null);
+  const [selectedResponsavel, setSelectedResponsavel] = useState<DropdownOption | null>(null);
 
   useEffect(() => {
     if (exigencia && mode === 'edit') {
@@ -66,7 +60,12 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
         ...exigencia,
         prazo: convertDateFormat(exigencia.prazo, 'toInput')
       });
-      setResponsavelSearch(exigencia.atribuidoA || '');
+      // Configurar status selecionado
+      const status = statusOptions.find(s => s.value === exigencia.status);
+      setSelectedStatus(status || statusOptions[0]);
+      // Configurar responsável selecionado
+      const responsavel = usuariosOptions.find(u => u.value === exigencia.atribuidoA);
+      setSelectedResponsavel(responsavel || null);
     } else {
       setFormData({
         descricao: '',
@@ -75,28 +74,12 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
         status: 'Não Iniciado',
         atribuidoA: ''
       });
-      setResponsavelSearch('');
+      setSelectedStatus(statusOptions[0]); // Não Iniciado como padrão
+      setSelectedResponsavel(null);
     }
     setErrors({});
-    setShowResponsavelDropdown(false);
   }, [exigencia, mode, isOpen]);
 
-  // Fechar dropdown ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.responsavel-dropdown-container')) {
-        setShowResponsavelDropdown(false);
-      }
-    };
-
-    if (showResponsavelDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [showResponsavelDropdown]);
 
   const convertDateFormat = (date: string, direction: 'toInput' | 'toDisplay'): string => {
     if (!date) return '';
@@ -125,6 +108,10 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
     
     if (!formData.prazo) {
       newErrors.prazo = 'Prazo é obrigatório';
+    }
+    
+    if (!formData.status) {
+      newErrors.status = 'Status é obrigatório';
     }
     
     setErrors(newErrors);
@@ -237,84 +224,41 @@ const RequirementModal: React.FC<RequirementModalProps> = ({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Não Iniciado">Não Iniciado</option>
-                  <option value="Em Progresso">Em Progresso</option>
-                  <option value="Pendente">Pendente</option>
-                  <option value="Concluído">Concluído</option>
-                </select>
-              </div>
+              <SearchableDropdown
+                label="Status"
+                required={true}
+                options={statusOptions}
+                value={selectedStatus}
+                onChange={(option) => {
+                  setSelectedStatus(option);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    status: (option?.value || 'Não Iniciado') as Exigencia['status'] 
+                  }));
+                  if (errors.status && option) {
+                    setErrors(prev => ({ ...prev, status: '' }));
+                  }
+                }}
+                error={errors.status}
+                placeholder="Selecione o status..."
+                allowEmpty={false}
+              />
 
-              <div className="relative responsavel-dropdown-container">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Responsável
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={responsavelSearch}
-                    onChange={(e) => {
-                      setResponsavelSearch(e.target.value);
-                      setFormData(prev => ({ ...prev, atribuidoA: e.target.value }));
-                      setShowResponsavelDropdown(true);
-                    }}
-                    onFocus={() => setShowResponsavelDropdown(true)}
-                    className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Buscar responsável..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowResponsavelDropdown(!showResponsavelDropdown)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <ChevronDown size={20} />
-                  </button>
-                </div>
-                
-                {showResponsavelDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResponsavelSearch('');
-                        setFormData(prev => ({ ...prev, atribuidoA: '' }));
-                        setShowResponsavelDropdown(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100"
-                    >
-                      Nenhum responsável
-                    </button>
-                    {filteredUsuarios.map((usuario) => (
-                      <button
-                        key={usuario}
-                        type="button"
-                        onClick={() => {
-                          setResponsavelSearch(usuario);
-                          setFormData(prev => ({ ...prev, atribuidoA: usuario }));
-                          setShowResponsavelDropdown(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        {usuario}
-                      </button>
-                    ))}
-                    {filteredUsuarios.length === 0 && responsavelSearch && (
-                      <div className="px-3 py-2 text-sm text-gray-500">
-                        Nenhum usuário encontrado
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <SearchableDropdown
+                label="Responsável"
+                options={usuariosOptions}
+                value={selectedResponsavel}
+                onChange={(option) => {
+                  setSelectedResponsavel(option);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    atribuidoA: option?.value || '' 
+                  }));
+                }}
+                placeholder="Buscar responsável..."
+                allowEmpty={true}
+                emptyText="Nenhum responsável"
+              />
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">

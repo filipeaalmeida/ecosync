@@ -47,7 +47,10 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
     dataEmissao: '2022-12-27',
     dataValidade: '2023-12-27',
     prazoRenovacao: '2023-08-29',
-    observacoes: ''
+    observacoes: '',
+    notificarAtribuicao: false,
+    notificarAtribuicaoSistema: false,
+    notificarAtribuicaoEmail: false
   });
 
 
@@ -234,7 +237,8 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
   const [accordionOpen, setAccordionOpen] = useState({
     prazoAntecipado: false,
     renovacao: false,
-    vencimento: false
+    vencimento: false,
+    atribuicao: false
   });
   
   const [exigencias, setExigencias] = useState<Exigencia[]>([
@@ -1445,6 +1449,84 @@ Fazenda Boa Vista - Zona Rural do Distrito Bom Nome, sn, Zona Rural, 50000000, S
                     </div>
                   )}
                 </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Seção 4: Notificação de Atribuição */}
+                <div className="bg-white shadow rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setAccordionOpen(prev => ({ ...prev, atribuicao: !prev.atribuicao }))}
+                    className="w-full px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b"
+                  >
+                    <div>
+                      <h2 className="text-lg font-medium text-gray-900 text-left">
+                        Notificar quando uma exigência for atribuída
+                      </h2>
+                      <p className="text-sm text-gray-600 text-left">
+                        Alerta automático ao atribuir responsável
+                      </p>
+                    </div>
+                    <svg 
+                      className={`w-5 h-5 transition-transform ${accordionOpen.atribuicao ? 'rotate-180' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {accordionOpen.atribuicao && (
+                    <div className="p-6">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Quando uma exigência for atribuída a um responsável, notificar automaticamente.
+                      </p>
+                      
+                      <div className="space-y-4">
+                        <div className="flex items-center">
+                          <input 
+                            type="checkbox" 
+                            id="notificarAtribuicao"
+                            checked={formData.notificarAtribuicao || false}
+                            onChange={(e) => setFormData(prev => ({ ...prev, notificarAtribuicao: e.target.checked }))}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                          />
+                          <label htmlFor="notificarAtribuicao" className="ml-2 text-sm text-gray-900">
+                            Ativar notificação de atribuição de responsável
+                          </label>
+                        </div>
+
+                        {formData.notificarAtribuicao && (
+                          <div className="ml-6 space-y-3 border-l-2 border-blue-200 pl-4">
+                            <p className="text-xs text-gray-600 mb-3">
+                              Escolha como o responsável será notificado:
+                            </p>
+                            <div className="space-y-2">
+                              <label className="flex items-center">
+                                <input 
+                                  type="checkbox" 
+                                  id="notificarAtribuicaoSistema"
+                                  checked={formData.notificarAtribuicaoSistema || false}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, notificarAtribuicaoSistema: e.target.checked }))}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2" 
+                                />
+                                <span className="text-sm text-gray-700">Notificação no sistema</span>
+                              </label>
+                              <label className="flex items-center">
+                                <input 
+                                  type="checkbox" 
+                                  id="notificarAtribuicaoEmail"
+                                  checked={formData.notificarAtribuicaoEmail || false}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, notificarAtribuicaoEmail: e.target.checked }))}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2" 
+                                />
+                                <span className="text-sm text-gray-700">Email de notificação</span>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

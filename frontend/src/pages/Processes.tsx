@@ -31,7 +31,6 @@ const Processes: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages] = useState(10);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showAddProcessModal, setShowAddProcessModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [processToDelete, setProcessToDelete] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -94,8 +93,6 @@ const Processes: React.FC = () => {
     },
   ]);
 
-  const companies = Array.from(new Set(processes.map(p => p.companyName)));
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -151,20 +148,6 @@ const Processes: React.FC = () => {
 
   const toggleFilterDropdown = (filter: string) => {
     setOpenFilterDropdown(openFilterDropdown === filter ? null : filter);
-  };
-
-
-  const handleCompanyToggle = (company: string) => {
-    if (company === 'all') {
-      setFilters(prev => ({ ...prev, company: [] }));
-    } else {
-      setFilters(prev => ({
-        ...prev,
-        company: prev.company.includes(company)
-          ? prev.company.filter(c => c !== company)
-          : [...prev.company, company]
-      }));
-    }
   };
 
   const clearFilters = () => {
@@ -229,12 +212,6 @@ const Processes: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const closeModal = () => {
-    setShowAddProcessModal(false);
-    setUploadedFile(null);
-    setIsProcessing(false);
-    setDragActive(false);
-  };
 
   const getDateFilterCount = () => {
     let count = 0;
@@ -449,11 +426,105 @@ const Processes: React.FC = () => {
               <div className="flex min-w-72 flex-col gap-3">
                 <p className="text-[#0d141c] tracking-light text-[32px] font-bold leading-tight">Processos</p>
               </div>
-              <button 
-                onClick={() => setShowAddProcessModal(true)}
-                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#e7edf4] text-[#0d141c] text-sm font-medium leading-normal">
-                <span className="truncate">Adicionar Processo</span>
-              </button>
+            </div>
+            
+            {/* Área de Upload */}
+            <div className="px-4 pb-4">
+              <div 
+                className={`flex flex-col items-center gap-4 rounded-lg border-2 border-dashed px-6 py-8 transition-colors ${
+                  dragActive 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : uploadedFile 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-[#cedbe8] bg-gray-50'
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+                
+                {!uploadedFile ? (
+                  <>
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#49739c" viewBox="0 0 256 256">
+                        <path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-40-64a8,8,0,0,1-8,8H136v16a8,8,0,0,1-16,0V160H104a8,8,0,0,1,0-16h16V128a8,8,0,0,1,16,0v16h16A8,8,0,0,1,160,152Z"></path>
+                      </svg>
+                      <p className="text-[#0d141c] text-base font-semibold leading-tight text-center">
+                        Adicionar Novo Processo
+                      </p>
+                      <p className="text-[#49739c] text-sm font-normal leading-normal text-center max-w-[500px]">
+                        Arraste e solte um arquivo PDF aqui ou clique para navegar. Nossa IA irá analisar e extrair as informações do processo automaticamente.
+                      </p>
+                    </div>
+                    <button
+                      onClick={openFileDialog}
+                      className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium leading-normal"
+                    >
+                      <span className="truncate">Selecionar PDF</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {isProcessing ? (
+                      <>
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+                          <p className="text-[#49739c] text-sm font-normal leading-normal text-center">
+                            Processando documento com IA...
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-col items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#22c55e" viewBox="0 0 256 256">
+                            <path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-26.34-82.34-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69l42.34-42.35a8,8,0,0,1,11.32,11.32Z"></path>
+                          </svg>
+                          <p className="text-[#0d141c] text-base font-semibold leading-tight text-center">
+                            Documento enviado com sucesso!
+                          </p>
+                          <p className="text-[#49739c] text-sm font-normal leading-normal text-center">
+                            {uploadedFile.name}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setUploadedFile(null);
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                              }
+                            }}
+                            className="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-gray-200 hover:bg-gray-300 text-[#0d141c] text-sm font-medium leading-normal"
+                          >
+                            Trocar arquivo
+                          </button>
+                          <button
+                            onClick={() => {
+                              console.log('Salvando processo...');
+                              setUploadedFile(null);
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                              }
+                            }}
+                            className="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-green-500 hover:bg-green-600 text-white text-sm font-medium leading-normal"
+                          >
+                            Salvar Processo
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
             <div className="px-4 py-3">
               <div className="flex overflow-hidden rounded-lg border border-[#cedbe8] bg-slate-50">
@@ -558,127 +629,6 @@ const Processes: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de Adicionar Processo */}
-      {showAddProcessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-[512px] w-full mx-4 max-h-[90vh] overflow-y-auto">
-            {/* Header do Modal */}
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h2 className="text-[#0d141c] text-xl font-bold">Adicionar Novo Processo</h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
-                  <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
-                </svg>
-              </button>
-            </div>
-
-            {/* Corpo do Modal */}
-            <div className="p-6">
-              <div 
-                className={`flex flex-col items-center gap-6 rounded-lg border-2 border-dashed px-6 py-14 transition-colors ${
-                  dragActive 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : uploadedFile 
-                      ? 'border-green-500 bg-green-50' 
-                      : 'border-[#cedbe8] bg-white'
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                />
-                
-                {!uploadedFile ? (
-                  <>
-                    <div className="flex flex-col items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#49739c" viewBox="0 0 256 256">
-                        <path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-40-64a8,8,0,0,1-8,8H136v16a8,8,0,0,1-16,0V160H104a8,8,0,0,1,0-16h16V128a8,8,0,0,1,16,0v16h16A8,8,0,0,1,160,152Z"></path>
-                      </svg>
-                      <p className="text-[#0d141c] text-lg font-bold leading-tight text-center">
-                        Enviar Documento do Processo
-                      </p>
-                      <p className="text-[#49739c] text-sm font-normal leading-normal text-center max-w-[400px]">
-                        Arraste e solte um arquivo PDF aqui, ou clique para navegar. Nossa IA irá analisar e extrair as informações necessárias.
-                      </p>
-                    </div>
-                    <button
-                      onClick={openFileDialog}
-                      className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em]"
-                    >
-                      <span className="truncate">Enviar PDF</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {isProcessing ? (
-                      <>
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                          <p className="text-[#49739c] text-sm font-normal leading-normal text-center">
-                            Processando documento com IA...
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex flex-col items-center gap-2">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#22c55e" viewBox="0 0 256 256">
-                            <path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-26.34-82.34-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L120,164.69l42.34-42.35a8,8,0,0,1,11.32,11.32Z"></path>
-                          </svg>
-                          <p className="text-[#0d141c] text-lg font-bold leading-tight text-center">
-                            Documento enviado com sucesso!
-                          </p>
-                          <p className="text-[#49739c] text-sm font-normal leading-normal text-center">
-                            {uploadedFile.name}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              setUploadedFile(null);
-                              if (fileInputRef.current) {
-                                fileInputRef.current.value = '';
-                              }
-                            }}
-                            className="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200 hover:bg-gray-300 text-[#0d141c] text-sm font-bold leading-normal"
-                          >
-                            Trocar arquivo
-                          </button>
-                          <button
-                            onClick={() => {
-                              console.log('Salvando processo...');
-                              closeModal();
-                            }}
-                            className="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-green-500 hover:bg-green-600 text-white text-sm font-bold leading-normal"
-                          >
-                            Salvar Processo
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-              
-              {!uploadedFile && (
-                <p className="text-[#49739c] text-xs font-normal leading-normal pt-3 text-center">
-                  Ao enviar, você concorda com nossos termos e condições.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && (

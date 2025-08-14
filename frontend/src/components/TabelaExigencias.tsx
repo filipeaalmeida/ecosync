@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ExternalLink, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DateIndicator from './DateIndicator';
+import SearchableDropdown, { DropdownOption } from './SearchableDropdown';
 
 export interface Exigencia {
   id: number;
@@ -16,6 +17,8 @@ interface TabelaExigenciasProps {
   exigencias: Exigencia[];
   onEditarExigencia?: (id: number) => void;
   onRemoverExigencia?: (id: number) => void;
+  onStatusChange?: (id: number, novoStatus: string) => void;
+  onResponsavelChange?: (id: number, novoResponsavel: string) => void;
   showProcessoLink?: boolean;
 }
 
@@ -23,16 +26,37 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
   exigencias, 
   onEditarExigencia,
   onRemoverExigencia,
+  onStatusChange,
+  onResponsavelChange,
   showProcessoLink = true
 }) => {
   const navigate = useNavigate();
   const [editingStatusId, setEditingStatusId] = useState<number | null>(null);
   const [editingAtribuidoId, setEditingAtribuidoId] = useState<number | null>(null);
-  const [searchAtribuidoEdit, setSearchAtribuidoEdit] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const pessoas = Array.from(new Set(exigencias.map(e => e.atribuidoA)));
+  // Opções para os dropdowns - mesmas do modal
+  const statusOptions: DropdownOption[] = [
+    { value: 'Não Iniciado', label: 'Não Iniciado', color: 'bg-gray-100 text-gray-800 border-gray-200' },
+    { value: 'Em Progresso', label: 'Em Progresso', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+    { value: 'Pendente', label: 'Pendente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+    { value: 'Concluído', label: 'Concluído', color: 'bg-green-100 text-green-800 border-green-200' }
+  ];
+  
+  // Lista de usuários - em produção virá do backend
+  const usuariosOptions: DropdownOption[] = [
+    { value: 'Maria Silva', label: 'Maria Silva' },
+    { value: 'João Santos', label: 'João Santos' },
+    { value: 'Ana Costa', label: 'Ana Costa' },
+    { value: 'Pedro Oliveira', label: 'Pedro Oliveira' },
+    { value: 'Carla Mendes', label: 'Carla Mendes' },
+    { value: 'Roberto Lima', label: 'Roberto Lima' },
+    { value: 'Fernanda Souza', label: 'Fernanda Souza' },
+    { value: 'Lucas Pereira', label: 'Lucas Pereira' },
+    { value: 'Juliana Alves', label: 'Juliana Alves' },
+    { value: 'Marcos Rodrigues', label: 'Marcos Rodrigues' }
+  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -52,16 +76,6 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
   const handleAcao = (acao: string, id: number) => {
     if (acao === 'editar' && onEditarExigencia) {
       onEditarExigencia(id);
-    } else if (acao === 'editar-status') {
-      setEditingStatusId(id);
-      setOpenMenuId(null);
-    } else if (acao === 'editar-atribuido') {
-      const exigencia = exigencias.find(e => e.id === id);
-      if (exigencia) {
-        setSearchAtribuidoEdit(exigencia.atribuidoA);
-      }
-      setEditingAtribuidoId(id);
-      setOpenMenuId(null);
     } else if (acao === 'remover' && onRemoverExigencia) {
       onRemoverExigencia(id);
       setOpenMenuId(null);
@@ -70,10 +84,50 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
     }
   };
 
+  // Funções para edição inline
+  const handleStatusClick = (id: number) => {
+    setEditingStatusId(id);
+    setEditingAtribuidoId(null); // Fechar edição de responsável se estiver aberta
+    setOpenMenuId(null);
+  };
+
+  const handleResponsavelClick = (id: number) => {
+    setEditingAtribuidoId(id);
+    setEditingStatusId(null); // Fechar edição de status se estiver aberta
+    setOpenMenuId(null);
+  };
+
+  const handleStatusChange = (id: number, novoStatus: DropdownOption | null) => {
+    if (novoStatus && novoStatus.value) {
+      console.log(`Alterando status da exigência ${id} para: ${novoStatus.value}`);
+      if (onStatusChange) {
+        onStatusChange(id, novoStatus.value);
+      }
+    }
+    setEditingStatusId(null);
+  };
+
+  const handleResponsavelChange = (id: number, novoResponsavel: DropdownOption | null) => {
+    if (novoResponsavel) {
+      console.log(`Alterando responsável da exigência ${id} para: ${novoResponsavel.value}`);
+      if (onResponsavelChange) {
+        onResponsavelChange(id, novoResponsavel.value);
+      }
+    }
+    setEditingAtribuidoId(null);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setOpenMenuId(null);
+      }
+      
+      // Fechar dropdowns de edição se clicar fora
+      const target = event.target as Element;
+      if (!target.closest('[data-editing-cell]')) {
+        setEditingStatusId(null);
+        setEditingAtribuidoId(null);
       }
     };
 
@@ -123,68 +177,51 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
                 <td className="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
                   <DateIndicator date={exigencia.prazo} />
                 </td>
-                <td className="h-[72px] px-4 py-2">
+                <td className="h-[72px] px-4 py-2 whitespace-nowrap">
                   {editingStatusId === exigencia.id ? (
-                    <select
-                      className="px-3 py-1 rounded-lg text-xs font-medium border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={exigencia.status}
-                      onChange={(e) => {
-                        console.log('Novo status:', e.target.value);
-                        setEditingStatusId(null);
-                      }}
-                      onBlur={() => setEditingStatusId(null)}
-                      autoFocus
-                    >
-                      <option value="Em Progresso">Em Progresso</option>
-                      <option value="Concluído">Concluído</option>
-                      <option value="Não Iniciado">Não Iniciado</option>
-                      <option value="Pendente">Pendente</option>
-                    </select>
+                    <div style={{ width: '150px' }} data-editing-cell>
+                      <SearchableDropdown
+                        options={statusOptions}
+                        value={statusOptions.find(opt => opt.value === exigencia.status) || null}
+                        onChange={(option) => handleStatusChange(exigencia.id, option)}
+                        placeholder="Status..."
+                        allowEmpty={false}
+                        className="text-xs"
+                        autoFocus={true}
+                      />
+                    </div>
                   ) : (
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(exigencia.status)}`}>
+                    <button
+                      onClick={() => handleStatusClick(exigencia.id)}
+                      className={`inline-flex px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap ${getStatusColor(exigencia.status)}`}
+                      title="Clique para editar status"
+                    >
                       {exigencia.status}
-                    </span>
+                    </button>
                   )}
                 </td>
                 <td className="h-[72px] px-4 py-2 text-[#49739c] text-sm font-normal leading-normal">
                   {editingAtribuidoId === exigencia.id ? (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        value={searchAtribuidoEdit}
-                        onChange={(e) => setSearchAtribuidoEdit(e.target.value)}
-                        onBlur={() => {
-                          setEditingAtribuidoId(null);
-                          setSearchAtribuidoEdit('');
-                        }}
-                        placeholder="Buscar pessoa..."
-                        autoFocus
+                    <div style={{ width: '180px' }} data-editing-cell>
+                      <SearchableDropdown
+                        options={usuariosOptions}
+                        value={usuariosOptions.find(opt => opt.value === exigencia.atribuidoA) || null}
+                        onChange={(option) => handleResponsavelChange(exigencia.id, option)}
+                        placeholder="Buscar responsável..."
+                        allowEmpty={true}
+                        emptyText="Nenhum responsável"
+                        className="text-sm"
+                        autoFocus={true}
                       />
-                      {searchAtribuidoEdit && (
-                        <div className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
-                          {pessoas
-                            .filter(p => p.toLowerCase().includes(searchAtribuidoEdit.toLowerCase()))
-                            .map(pessoa => (
-                              <button
-                                key={pessoa}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  console.log('Atribuir para:', pessoa);
-                                  setEditingAtribuidoId(null);
-                                  setSearchAtribuidoEdit('');
-                                }}
-                              >
-                                {pessoa}
-                              </button>
-                            ))
-                          }
-                        </div>
-                      )}
                     </div>
                   ) : (
-                    <span>{exigencia.atribuidoA}</span>
+                    <button
+                      onClick={() => handleResponsavelClick(exigencia.id)}
+                      className="text-[#49739c] text-sm font-normal leading-normal hover:text-[#0d141c] hover:bg-gray-100 px-2 py-1 rounded transition-colors cursor-pointer"
+                      title="Clique para editar responsável"
+                    >
+                      {exigencia.atribuidoA || 'Sem responsável'}
+                    </button>
                   )}
                 </td>
                 <td className="h-[72px] px-4 py-2 text-center">
@@ -203,19 +240,7 @@ const TabelaExigencias: React.FC<TabelaExigenciasProps> = ({
                         <MoreVertical size={16} />
                       </button>
                       {openMenuId === exigencia.id && (
-                        <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
-                          <button
-                            onClick={() => handleAcao('editar-status', exigencia.id)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            Editar Status
-                          </button>
-                          <button
-                            onClick={() => handleAcao('editar-atribuido', exigencia.id)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            Editar Responsável
-                          </button>
+                        <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[120px]">
                           <button
                             onClick={() => handleAcao('remover', exigencia.id)}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"

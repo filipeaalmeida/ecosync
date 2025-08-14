@@ -37,7 +37,7 @@ const Exigencias: React.FC = () => {
     prazoTo: ''
   });
 
-  const [exigencias] = useState<Exigencia[]>([
+  const [exigencias, setExigencias] = useState<Exigencia[]>([
     {
       id: 1,
       descricao: 'Apresentar relatório anual completo com demonstrações financeiras auditadas, incluindo balanço patrimonial, demonstração de resultados, fluxo de caixa e notas explicativas. O relatório deve estar em conformidade com as normas contábeis vigentes e incluir parecer de auditoria independente.',
@@ -134,6 +134,22 @@ const Exigencias: React.FC = () => {
     setShowDeleteModal(true);
   };
 
+  const handleStatusChange = (id: number, novoStatus: string) => {
+    setExigencias(prev => prev.map(exigencia => 
+      exigencia.id === id 
+        ? { ...exigencia, status: novoStatus as Exigencia['status'] }
+        : exigencia
+    ));
+  };
+
+  const handleResponsavelChange = (id: number, novoResponsavel: string) => {
+    setExigencias(prev => prev.map(exigencia => 
+      exigencia.id === id 
+        ? { ...exigencia, atribuidoA: novoResponsavel }
+        : exigencia
+    ));
+  };
+
   const confirmDelete = () => {
     if (exigenciaToDelete) {
       console.log(`Removendo exigência ${exigenciaToDelete}`);
@@ -151,7 +167,7 @@ const Exigencias: React.FC = () => {
   const handleDownloadXLSX = () => {
     // Converter para CSV (formato simplificado)
     const csvContent = [
-      ['Descrição', 'Processo', 'Prazo', 'Status', 'Atribuído a'],
+      ['Descrição', 'Processo', 'Prazo', 'Status', 'Responsável'],
       ...exigencias.map(e => [
         e.descricao,
         e.processo,
@@ -416,14 +432,14 @@ const Exigencias: React.FC = () => {
                 )}
               </div>
 
-              {/* Filtro Atribuído a */}
+              {/* Filtro Responsável */}
               <div className="relative">
                 <button 
                   onClick={() => toggleFilterDropdown('atribuido')}
                   className="flex h-8 w-full items-center justify-between gap-x-2 rounded-lg bg-[#e7edf4] pl-4 pr-2"
                 >
                   <p className="text-[#0d141c] text-sm font-medium leading-normal">
-                    Atribuído a {filters.atribuidoA.length > 0 && `(${filters.atribuidoA.length})`}
+                    Responsável {filters.atribuidoA.length > 0 && `(${filters.atribuidoA.length})`}
                   </p>
                   <ChevronDown size={20} />
                 </button>
@@ -509,6 +525,8 @@ const Exigencias: React.FC = () => {
                 exigencias={currentExigencias}
                 onEditarExigencia={handleEditarExigencia}
                 onRemoverExigencia={handleRemoverExigencia}
+                onStatusChange={handleStatusChange}
+                onResponsavelChange={handleResponsavelChange}
                 showProcessoLink={true}
               />
             </div>
